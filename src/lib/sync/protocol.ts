@@ -1,10 +1,16 @@
+import type { AppTag } from "../bridge"
+
+export {
+  type AppTag,
+  MAX_CLOCK_SKEW,
+  TOMBSTONE_TTL,
+} from "../bridge"
+
 export const syncedCollections = ["files", "todos", "events"] as const
 
 export type SyncedCollection = (typeof syncedCollections)[number]
 
 export type StoredCollection = Exclude<SyncedCollection, "files">
-
-export type AppTag = "note" | "eris"
 
 export type SyncRecord = {
   collection: SyncedCollection
@@ -22,10 +28,6 @@ export type Snapshot = {
   app: AppTag
   records: SyncRecord[]
 }
-
-export const MAX_CLOCK_SKEW = 24 * 60 * 60 * 1000
-
-export const TOMBSTONE_TTL = 30 * 24 * 60 * 60 * 1000
 
 export const MAX_FILE = 1024 * 1024
 
