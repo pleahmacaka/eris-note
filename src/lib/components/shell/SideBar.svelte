@@ -1,5 +1,6 @@
 <script lang="ts">
   import Icon from "@iconify/svelte"
+  import { fly } from "svelte/transition"
   import { rem } from "$lib/ascii/motion"
   import { showMenu } from "$lib/menu/menu.svelte"
   import PanelView from "$lib/components/panels/PanelView.svelte"
@@ -26,10 +27,40 @@
 
   const active = $derived(layout.active[side] ?? panels[0] ?? null)
 
+  const LEAVE_DELAY = 200
+
   let hover = $state<PanelId | "end" | null>(null)
   let resizing = $state(false)
+  let hovering = $state(false)
+  let typing = $state(false)
+  let leave: ReturnType<typeof setTimeout> | undefined
+  let dragged = false
 
   const open = $derived(layout.open[side])
+
+  const peeking = $derived(!open && (hovering || typing))
+
+  const peek = (on: boolean) => {
+    clearTimeout(leave)
+
+    if (on) {
+      hovering = true
+    } else {
+      leave = setTimeout(() => (hovering = false), LEAVE_DELAY)
+    }
+  }
+
+  const field = (target: EventTarget | null) =>
+    target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement
+
+  $effect(() => {
+    if (drag.kind) {
+      dragged = true
+    } else if (dragged) {
+      dragged = false
+      hovering = false
+    }
+  })
 
   const panelMenu = (event: MouseEvent, panel: PanelId) => {
     const other = side === "left" ? "right" : "left"
@@ -83,7 +114,54 @@
   }
 </script>
 
+{#snippet body(panel: PanelId)}
+  {#if side === "left"}
+    <div class="lg:hidden">
+      <ActivityBar horizontal />
+    </div>
+  {:else}
+    <div
+      class="flex h-9 shrink-0 items-stretch border-b border-base-content/10"
+      role="tablist"
+    >
+      {#each panels as tab (tab)}
+        {@const on = tab === panel}
+        <button
+          role="tab"
+          aria-selected={on}
+          draggable="true"
+          class={[
+            "relative flex cursor-pointer items-center gap-1.5 px-3 text-xs",
+            on ? "text-base-content" : "text-base-content/50 hover:text-base-content",
+            hover === tab && "bg-primary/10",
+          ]}
+          title={PANELS[tab].label}
+          onclick={() => (layout.active[side] = tab)}
+          oncontextmenu={e => panelMenu(e, tab)}
+          ondragstart={e => startDrag(e, "panel", tab)}
+          ondragend={endDrag}
+          ondragenter={() => (hover = tab)}
+          ondragleave={() => (hover = null)}
+          ondragover={e => accept(e, "panel")}
+          ondrop={e => drop(e, tab)}
+        >
+          {#if on}
+            <span class="absolute inset-x-2 bottom-0 h-0.5 bg-primary"></span>
+          {/if}
+          <Icon icon={PANELS[tab].icon} class="size-4" />
+          <span class={[panels.length > 2 && "sr-only"]}>
+            {PANELS[tab].label}
+          </span>
+        </button>
+      {/each}
+    </div>
+  {/if}
+
+  <PanelView {panel} />
+{/snippet}
+
 {#if active}
+  <div class="relative flex shrink-0">
   <aside
     class={[
       "pad-bottom relative flex shrink-0 overflow-hidden bg-base-100",
@@ -105,49 +183,9 @@
       class="flex h-full shrink-0 flex-col max-lg:w-full!"
       style:width="{layout.width[side]}rem"
     >
-    {#if side === "left"}
-      <div class="lg:hidden">
-        <ActivityBar horizontal />
-      </div>
-    {:else}
-      <div
-        class="flex h-9 shrink-0 items-stretch border-b border-base-content/10"
-        role="tablist"
-      >
-        {#each panels as panel (panel)}
-          {@const on = panel === active}
-          <button
-            role="tab"
-            aria-selected={on}
-            draggable="true"
-            class={[
-              "relative flex cursor-pointer items-center gap-1.5 px-3 text-xs",
-              on ? "text-base-content" : "text-base-content/50 hover:text-base-content",
-              hover === panel && "bg-primary/10",
-            ]}
-            title={PANELS[panel].label}
-            onclick={() => (layout.active[side] = panel)}
-            oncontextmenu={e => panelMenu(e, panel)}
-            ondragstart={e => startDrag(e, "panel", panel)}
-            ondragend={endDrag}
-            ondragenter={() => (hover = panel)}
-            ondragleave={() => (hover = null)}
-            ondragover={e => accept(e, "panel")}
-            ondrop={e => drop(e, panel)}
-          >
-            {#if on}
-              <span class="absolute inset-x-2 bottom-0 h-0.5 bg-primary"></span>
-            {/if}
-            <Icon icon={PANELS[panel].icon} class="size-4" />
-            <span class={[panels.length > 2 && "sr-only"]}>
-              {PANELS[panel].label}
-            </span>
-          </button>
-        {/each}
-      </div>
-    {/if}
-
-    <PanelView panel={active} />
+      {#if !peeking}
+        {@render body(active)}
+      {/if}
     </div>
 
     <div
@@ -162,4 +200,38 @@
       onpointerdown={resize}
     ></div>
   </aside>
+
+  {#if !open}
+    <div
+      class={[
+        "absolute inset-y-0 z-30 w-2 max-lg:hidden",
+        side === "left" ? "left-0" : "right-0",
+      ]}
+      role="presentation"
+      onmouseenter={() => peek(true)}
+      onmouseleave={() => peek(false)}
+    ></div>
+  {/if}
+
+  {#if peeking}
+    <div
+      class={[
+        "absolute inset-y-2 z-40 flex flex-col overflow-hidden rounded-box border",
+        "border-base-content/10 bg-base-100 shadow-xl max-lg:hidden",
+        side === "left" ? "left-1" : "right-1",
+        drag.kind && "pointer-events-none opacity-0",
+      ]}
+      style:width="{layout.width[side]}rem"
+      role="complementary"
+      aria-label={side === "left" ? "왼쪽 사이드바" : "오른쪽 사이드바"}
+      transition:fly={{ x: side === "left" ? -12 : 12, duration: 150 }}
+      onmouseenter={() => peek(true)}
+      onmouseleave={() => peek(false)}
+      onfocusin={e => (typing = field(e.target))}
+      onfocusout={() => (typing = false)}
+    >
+      {@render body(active)}
+    </div>
+  {/if}
+  </div>
 {/if}
