@@ -40,7 +40,7 @@ const DEBOUNCE = 1_000
 const message = (error: unknown) =>
   error instanceof Error ? error.message : String(error)
 
-const pack = (deviceId: string, records: SyncRecord[]) =>
+export const pack = (deviceId: string, records: SyncRecord[]) =>
   JSON.stringify({ deviceId, app: "note", records } satisfies Snapshot)
 
 const publish = async (device: DeviceSettings) => {
@@ -129,28 +129,35 @@ export const syncNow = () => {
   return running
 }
 
+const receive = async (payload: string) => {
+  const device = await ensureDevice()
+  const records = readSnapshot(payload).records.filter(
+    r => device.sync.collections[r.collection],
+  )
+  const loaded = vault.ready && vault.error === null && vault.root !== ""
+  const files = loaded ? records.filter(r => r.collection === "files") : []
+
+  if (files.length > 0) {
+    await vaultRecords(device.deviceId)
+  }
+
+  const touched = [
+    ...(await applyRemote(records)),
+    ...(await applyVaultRemote(files, device.deviceId)),
+  ]
+
+  if (touched.length > 0) {
+    await publish(device)
+  }
+}
+
+export const applyLocalSnapshot = (payload: string) =>
+  exclusive(() => receive(payload))
+
 const applySnapshot = (payload: string) =>
   exclusive(async () => {
     try {
-      const device = await ensureDevice()
-      const records = readSnapshot(payload).records.filter(
-        r => device.sync.collections[r.collection],
-      )
-      const loaded = vault.ready && vault.error === null && vault.root !== ""
-      const files = loaded ? records.filter(r => r.collection === "files") : []
-
-      if (files.length > 0) {
-        await vaultRecords(device.deviceId)
-      }
-
-      const touched = [
-        ...(await applyRemote(records)),
-        ...(await applyVaultRemote(files, device.deviceId)),
-      ]
-
-      if (touched.length > 0) {
-        await publish(device)
-      }
+      await receive(payload)
 
       const meta = await updateSyncMeta({ lastSyncAt: Date.now() })
 

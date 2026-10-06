@@ -194,7 +194,7 @@ export function field(
     resize.observe(canvas)
     seen.observe(canvas)
     themed.observe(document.documentElement, {
-      attributeFilter: ["data-theme", "data-motion", "class"],
+      attributeFilter: ["data-theme", "data-motion", "class", "style"],
     })
     reduced.addEventListener("change", change)
     document.addEventListener("visibilitychange", run)

@@ -4,6 +4,7 @@
   import { isTauri } from "$lib/platform/runtime"
   import { device, watchDevice } from "$lib/settings.svelte"
   import { startAutoSync } from "$lib/sync/engine"
+  import { erisStyle, startErisLink } from "$lib/sync/eris.svelte"
   import { applyAppearance } from "$lib/theme"
   import "./layout.css"
 
@@ -15,8 +16,10 @@
 
   $effect(() => (isTauri() ? startAutoSync() : undefined))
 
+  $effect(() => (isTauri() ? startErisLink() : undefined))
+
   $effect(() => {
-    applyAppearance(device.value.appearance)
+    applyAppearance(device.value.appearance, erisStyle.value)
   })
 </script>
 

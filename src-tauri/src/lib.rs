@@ -1,3 +1,4 @@
+mod eris;
 mod p2p;
 
 const SANDBOX: &[u8] = include_bytes!("sandbox.html");
@@ -48,6 +49,8 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            eris::eris_bridge_publish,
+            eris::eris_bridge_read,
             p2p::p2p_status,
             p2p::p2p_invite,
             p2p::p2p_join,

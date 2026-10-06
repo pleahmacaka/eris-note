@@ -3,6 +3,7 @@
   import Section from "$lib/components/ui/Section.svelte"
   import { patchAppearance, type ThemeMode, type TodoSort } from "$lib/settings"
   import { device } from "$lib/settings.svelte"
+  import { erisStyle } from "$lib/sync/eris.svelte"
   import Group from "./Group.svelte"
   import Row from "./Row.svelte"
   import Segmented from "./Segmented.svelte"
@@ -52,6 +53,15 @@
 </script>
 
 <Section title="테마">
+  {#snippet aside()}
+    {#if erisStyle.value}
+      <span class="flex shrink-0 items-center gap-1.5 text-xs text-primary">
+        <Icon icon="lucide:palette" class="size-3.5" />
+        Eris 스타일 적용 중
+      </span>
+    {/if}
+  {/snippet}
+
   <div class="grid grid-cols-3 gap-3" role="radiogroup" aria-label="테마">
     {#each MODES as mode (mode.id)}
       {@const active = appearance.mode === mode.id}
