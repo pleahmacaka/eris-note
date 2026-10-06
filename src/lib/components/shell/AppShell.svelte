@@ -31,6 +31,7 @@
     focusedPane,
     forget,
     openView,
+    panes,
     persistWorkspace,
     restoreWorkspace,
     splitPane,
@@ -38,7 +39,7 @@
   } from "$lib/workspace/workspace.svelte"
   import ActivityBar from "./ActivityBar.svelte"
   import Palette from "./Palette.svelte"
-  import PaneView from "./PaneView.svelte"
+  import LayoutView from "./LayoutView.svelte"
   import SideBar from "./SideBar.svelte"
   import StatusBar from "./StatusBar.svelte"
   import TitleBar from "./TitleBar.svelte"
@@ -77,7 +78,7 @@
   const prune = () => {
     const present = new Set(vault.entries.map(e => e.path))
 
-    for (const pane of workspace.panes) {
+    for (const pane of panes()) {
       for (const tab of pane.tabs) {
         if (tab.path && !present.has(tab.path)) {
           forget(tab.path)
@@ -212,10 +213,8 @@
 
     <SideBar side="left" />
 
-    <main class="flex min-h-0 min-w-0 flex-1 divide-x divide-base-content/10">
-      {#each workspace.panes as pane (pane.id)}
-        <PaneView {pane} />
-      {/each}
+    <main class="flex min-h-0 min-w-0 flex-1">
+      <LayoutView region={workspace.root} />
     </main>
 
     <SideBar side="right" />

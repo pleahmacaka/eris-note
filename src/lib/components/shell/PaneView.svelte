@@ -12,12 +12,14 @@
     startDrag,
   } from "$lib/workspace/drag.svelte"
   import { layout } from "$lib/workspace/layout.svelte"
-  import { openPath } from "$lib/workspace/navigate"
+  import { dockFile, openPath } from "$lib/workspace/navigate"
   import {
     activate,
     activeTab,
     closeOthers,
     closeTab,
+    dockTab,
+    type Edge,
     focusPane,
     moveTab,
     openView,
@@ -38,7 +40,57 @@
 
   const MARK = ["┌──────┐", "│ note │", "└──────┘"].join("\n")
 
+  const EDGE_BAND = 0.25
+
+  const ZONES: Record<Edge | "center", string> = {
+    left: "inset-y-2 left-2 w-[calc(50%-0.5rem)]",
+    right: "inset-y-2 right-2 w-[calc(50%-0.5rem)]",
+    top: "inset-x-2 top-2 h-[calc(50%-0.5rem)]",
+    bottom: "inset-x-2 bottom-2 h-[calc(50%-0.5rem)]",
+    center: "inset-2",
+  }
+
   let hover = $state<string | null>(null)
+  let zone = $state<Edge | "center" | null>(null)
+
+  const zoneAt = (event: DragEvent): Edge | "center" => {
+    const box = (event.currentTarget as HTMLElement).getBoundingClientRect()
+    const x = (event.clientX - box.left) / box.width
+    const y = (event.clientY - box.top) / box.height
+    const distances: [Edge, number][] = [
+      ["left", x],
+      ["right", 1 - x],
+      ["top", y],
+      ["bottom", 1 - y],
+    ]
+    const [edge, distance] = distances.reduce((a, b) => (b[1] < a[1] ? b : a))
+
+    return distance < EDGE_BAND ? edge : "center"
+  }
+
+  const dropInto = (event: DragEvent) => {
+    event.preventDefault()
+
+    const where = zone ?? "center"
+    const tab = payload(event, "tab")
+    const path = payload(event, "path")
+
+    zone = null
+
+    if (where === "center") {
+      drop(event, null)
+
+      return
+    }
+
+    if (tab) {
+      dockTab(tab, pane, where)
+    } else if (path) {
+      dockFile(path, pane, where)
+    }
+
+    endDrag()
+  }
 
   const tabMenu = (event: MouseEvent, tab: Tab) =>
     showMenu(event, [
@@ -91,7 +143,7 @@
 
 <section
   class={[
-    "flex min-w-0 flex-1 flex-col",
+    "flex min-h-0 min-w-0 flex-1 flex-col",
     !focused && "max-lg:hidden",
   ]}
   onfocusin={() => focusPane(pane.id)}
@@ -191,7 +243,32 @@
     </div>
   </div>
 
-  <div class="flex min-h-0 flex-1 flex-col bg-base-100">
+  <div class="relative flex min-h-0 flex-1 flex-col bg-base-100">
+    {#if drag.kind === "tab" || drag.kind === "path"}
+      <div
+        class="absolute inset-0 z-20"
+        role="region"
+        aria-label="창 분할"
+        ondragover={e => {
+          if (accept(e, "tab", "path")) {
+            zone = zoneAt(e)
+          }
+        }}
+        ondragleave={() => (zone = null)}
+        ondrop={dropInto}
+      >
+        {#if zone}
+          <div
+            class={[
+              "pointer-events-none absolute rounded-box border-2 border-primary/60",
+              "bg-primary/10 transition-all duration-100",
+              ZONES[zone],
+            ]}
+          ></div>
+        {/if}
+      </div>
+    {/if}
+
     {#if current}
       <ViewHost tab={current} />
     {:else}
