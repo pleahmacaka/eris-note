@@ -1,6 +1,6 @@
 <script lang="ts">
   import Icon from "@iconify/svelte"
-  import { dateKey } from "$lib/data/calendar"
+  import { dateKey, isDone } from "$lib/data/calendar"
   import { todos } from "$lib/data/store"
   import type { CalendarEvent, Todo } from "$lib/data/types"
   import { segments } from "$lib/markdown/cite"
@@ -115,7 +115,12 @@
             <span class={["w-0.5 shrink-0", meta.chip]}></span>
 
             <span class="min-w-0 flex-1">
-              <span class="line-clamp-2 text-sm font-medium break-keep">
+              <span
+                class={[
+                  "line-clamp-2 text-sm font-medium break-keep",
+                  isDone(event) && "line-through opacity-50",
+                ]}
+              >
                 {event.title}
               </span>
 

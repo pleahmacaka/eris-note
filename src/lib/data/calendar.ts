@@ -176,6 +176,11 @@ export const occurrences = (
   return found
 }
 
+// Eris keys done by series date; Note never shifts occurrences, so that is the start date
+export const isDone = (event: CalendarEvent) =>
+  event.task === true &&
+  (event.done ?? []).includes(dateKey(parseLocal(event.start)))
+
 const byStart = (a: CalendarEvent, b: CalendarEvent) =>
   Number(b.allDay) - Number(a.allDay) ||
   parseLocal(a.start).getTime() - parseLocal(b.start).getTime()

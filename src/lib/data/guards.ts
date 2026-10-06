@@ -53,7 +53,10 @@ export const isCalendarEvent = (value: unknown): value is CalendarEvent =>
   isBoolean(value.allDay) &&
   (value.color === null || isString(value.color)) &&
   (value.reminderMinutes === null || isNumber(value.reminderMinutes)) &&
-  RECURRENCES.includes(value.recurrence)
+  RECURRENCES.includes(value.recurrence) &&
+  (value.task === undefined || isBoolean(value.task)) &&
+  (value.done === undefined ||
+    (Array.isArray(value.done) && value.done.every(isString)))
 
 export const isNote = (value: unknown): value is Note =>
   isRecord(value) &&

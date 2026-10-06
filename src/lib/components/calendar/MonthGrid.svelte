@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { dateKey } from "$lib/data/calendar"
+  import { dateKey, isDone } from "$lib/data/calendar"
   import type { CalendarEvent } from "$lib/data/types"
   import { colorMeta, toColor } from "./colors"
   import { clock } from "./format"
@@ -138,7 +138,12 @@
             }}
           >
             <span class={["w-0.5 self-stretch", meta.chip]}></span>
-            <span class="min-w-0 flex-1 truncate font-medium">
+            <span
+              class={[
+                "min-w-0 flex-1 truncate font-medium",
+                isDone(event) && "line-through opacity-50",
+              ]}
+            >
               {event.title}
             </span>
             {#if !event.allDay}

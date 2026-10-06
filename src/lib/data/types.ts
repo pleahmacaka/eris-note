@@ -32,6 +32,8 @@ export type CalendarEvent = {
   color: string | null
   reminderMinutes: number | null
   recurrence: Recurrence
+  task?: boolean
+  done?: string[]
   createdAt: number
   updatedAt: number
 }

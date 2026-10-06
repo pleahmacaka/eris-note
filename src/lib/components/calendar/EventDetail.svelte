@@ -82,19 +82,22 @@
       return
     }
 
-    const base = startOfDay(parseLocal(event?.start ?? dateKey(day)))
+    const stored = event ? ((await eventStore.get(event.id)) ?? event) : null
+    const first = startOfDay(parseLocal(stored?.start ?? dateKey(day)))
+    const last = startOfDay(parseLocal(stored?.end ?? dateKey(day)))
     const stamp = Date.now()
     const next: CalendarEvent = {
-      id: event?.id ?? newId(),
+      ...stored,
+      id: stored?.id ?? newId(),
       title: title.trim(),
       notes,
       allDay,
-      start: allDay ? dateKey(base) : dateTimeKey(atMinutes(base, minutes(startTime))),
-      end: allDay ? dateKey(base) : dateTimeKey(atMinutes(base, minutes(endTime))),
+      start: allDay ? dateKey(first) : dateTimeKey(atMinutes(first, minutes(startTime))),
+      end: allDay ? dateKey(last) : dateTimeKey(atMinutes(last, minutes(endTime))),
       color,
-      reminderMinutes: event?.reminderMinutes ?? null,
+      reminderMinutes: stored?.reminderMinutes ?? null,
       recurrence,
-      createdAt: event?.createdAt ?? stamp,
+      createdAt: stored?.createdAt ?? stamp,
       updatedAt: stamp,
     }
 
