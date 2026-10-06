@@ -1,5 +1,6 @@
 <script lang="ts">
   import Icon from "@iconify/svelte"
+  import { untrack } from "svelte"
   import { SvelteSet } from "svelte/reactivity"
   import ConfirmDialog from "$lib/components/ui/ConfirmDialog.svelte"
   import { newCanvas, newFolder, newNote } from "$lib/workspace/commands"
@@ -7,7 +8,7 @@
   import { copyText } from "$lib/menu/clipboard"
   import { type MenuItem, showMenu } from "$lib/menu/menu.svelte"
   import { accept, endDrag, payload } from "$lib/workspace/drag.svelte"
-  import { closePanelsOnNarrow } from "$lib/workspace/layout.svelte"
+  import { closePanelsOnNarrow, layout } from "$lib/workspace/layout.svelte"
   import { openPath } from "$lib/workspace/navigate"
   import { forget, focusedTab, retarget } from "$lib/workspace/workspace.svelte"
   import { basename, isNote } from "$lib/vault/paths"
@@ -22,12 +23,21 @@
 
   const open = new SvelteSet<string>()
 
-  let renaming = $state<string | null>(null)
   let doomed = $state<TreeNode | null>(null)
   let confirming = $state(false)
   let failure = $state("")
 
   const tree = $derived(buildTree(vault.entries))
+
+  $effect(() => {
+    const parts = layout.renaming?.split("/") ?? []
+
+    untrack(() => {
+      for (let depth = 1; depth < parts.length; depth++) {
+        open.add(parts.slice(0, depth).join("/"))
+      }
+    })
+  })
 
   const active = $derived(focusedTab()?.path ?? null)
 
@@ -55,11 +65,11 @@
   }
 
   const rename = (node: TreeNode, name: string | null) => {
-    if (renaming !== node.path) {
+    if (layout.renaming !== node.path) {
       return
     }
 
-    renaming = null
+    layout.renaming = null
 
     if (name === null || name.trim() === "") {
       return
@@ -74,7 +84,7 @@
 
   const act = (node: TreeNode, action: "rename" | "delete" | "note") => {
     if (action === "rename") {
-      renaming = node.path
+      layout.renaming = node.path
     } else if (action === "delete") {
       doomed = node
       confirming = true
@@ -132,7 +142,7 @@
 
   const menu = (event: MouseEvent, node: TreeNode) => {
     const common: MenuItem[] = [
-      { label: "이름 변경", icon: "lucide:pencil", keys: "F2", run: () => (renaming = node.path) },
+      { label: "이름 변경", icon: "lucide:pencil", keys: "F2", run: () => (layout.renaming = node.path) },
       { label: "경로 복사", icon: "lucide:clipboard-copy", run: () => copyText(node.path) },
     ]
     const cite: MenuItem[] = isNote(node.path)
@@ -256,7 +266,7 @@
             depth={0}
             {open}
             {active}
-            {renaming}
+            renaming={layout.renaming}
             {toggle}
             {select}
             {rename}

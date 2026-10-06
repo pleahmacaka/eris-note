@@ -33,8 +33,14 @@ export const newNote = async (folder = currentFolder()) =>
 export const newCanvas = async (folder = currentFolder()) =>
   openPath(await createFile(folder, "제목 없음", ".canvas", EMPTY_CANVAS))
 
-export const newFolder = (parent = currentFolder()) =>
-  createFolder(parent, "새 폴더")
+export const newFolder = async (parent = currentFolder()) => {
+  const path = await createFolder(parent, "새 폴더")
+
+  revealPanel("files")
+  layout.renaming = path
+
+  return path
+}
 
 export const closeActiveTab = () => {
   const pane = focusedPane()

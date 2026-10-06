@@ -58,6 +58,7 @@ export const layout = $state({
   } as Record<Side, PanelId | null>,
   palette: null as PaletteMode | null,
   todoDay: null as string | null,
+  renaming: null as string | null,
   citeInto: null as ((path: string) => void) | null,
 })
 
