@@ -283,3 +283,16 @@
 :root {
   scrollbar-color: auto;
 }
+
+:focus-visible {
+  outline-width: 1px;
+  outline-offset: 1px;
+}
+
+:is(input, textarea, select, .input, .select, .textarea):is(
+    :focus,
+    :focus-visible,
+    :focus-within
+  ) {
+  outline: none;
+}
