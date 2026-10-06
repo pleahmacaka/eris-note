@@ -1,13 +1,16 @@
 <script lang="ts">
   import Icon from "@iconify/svelte"
   import { untrack } from "svelte"
+  import ConfirmDialog from "$lib/components/ui/ConfirmDialog.svelte"
   import Section from "$lib/components/ui/Section.svelte"
   import {
     onP2pPeers,
+    type P2pPeer,
     type P2pStatus,
     p2pInvite,
     p2pJoin,
     p2pLeave,
+    p2pRemove,
     p2pStatus,
     p2pSupported,
   } from "$lib/platform/p2p"
@@ -76,10 +79,15 @@
   let failure = $state("")
   let copied = $state(false)
   let confirming = $state(false)
+  let notice = $state("")
+  let removing = $state<P2pPeer | null>(null)
+  let confirmRemove = $state(false)
 
   const paired = $derived(pairing?.paired ?? false)
 
   const peers = $derived(pairing?.peers ?? [])
+
+  const removable = $derived(new Set(pairing?.removable ?? []))
 
   const status = $derived(
     sync.state === "idle" && peers.length === 0
@@ -151,6 +159,7 @@
   const act = async (task: () => Promise<void>) => {
     busy = true
     failure = ""
+    notice = ""
 
     try {
       await task()
@@ -183,6 +192,12 @@
       await p2pLeave()
       code = ""
       confirming = false
+    })
+
+  const remove = (peer: P2pPeer) =>
+    act(async () => {
+      await p2pRemove(peer.nodeId)
+      notice = "기기를 삭제했습니다"
     })
 
   const copy = async () => {
@@ -310,6 +325,21 @@
             <span class="tabular shrink-0 text-xs text-base-content/50">
               {peer.lastSeen === null ? "연결 기록 없음" : ago(peer.lastSeen)}
             </span>
+
+            {#if removable.has(peer.nodeId)}
+              <button
+                type="button"
+                class="btn btn-ghost btn-square btn-xs hover:text-error"
+                aria-label="기기 삭제"
+                disabled={busy}
+                onclick={() => {
+                  removing = peer
+                  confirmRemove = true
+                }}
+              >
+                <Icon icon="lucide:trash-2" class="size-3.5" />
+              </button>
+            {/if}
           </li>
         {/each}
       </ul>
@@ -427,6 +457,8 @@
 
     {#if failure}
       <p class="whitespace-pre-wrap break-all text-xs text-error">{failure}</p>
+    {:else if notice}
+      <p class="text-xs text-success">{notice}</p>
     {/if}
   </Section>
 
@@ -458,3 +490,11 @@
     </Row>
   </Group>
 {/if}
+
+<ConfirmDialog
+  bind:open={confirmRemove}
+  title="{removing?.name || removing?.nodeId.slice(0, 8)} 기기를 삭제할까요?"
+  body="모든 기기에서 이 기기를 삭제하고 연결 코드를 변경합니다. 이전 연결 코드는 사용할 수 없습니다."
+  action="삭제"
+  onconfirm={() => removing && remove(removing)}
+/>

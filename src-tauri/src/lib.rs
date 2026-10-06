@@ -54,6 +54,7 @@ pub fn run() {
             p2p::p2p_leave,
             p2p::p2p_publish,
             p2p::p2p_sync,
+            p2p::p2p_remove,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Note");
