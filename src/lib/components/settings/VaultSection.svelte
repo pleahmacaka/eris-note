@@ -1,14 +1,12 @@
 <script lang="ts">
+  import { Row, Section } from "@eris/ui"
   import Icon from "@iconify/svelte"
   import { open } from "@tauri-apps/plugin-dialog"
-  import Section from "$lib/components/ui/Section.svelte"
   import { patchVault } from "$lib/settings"
   import { device } from "$lib/settings.svelte"
   import { importLegacyNotes, legacyImported } from "$lib/vault/legacy"
   import { folderPath } from "$lib/vault/paths"
   import { vault } from "$lib/vault/vault.svelte"
-  import Group from "./Group.svelte"
-  import Row from "./Row.svelte"
 
   const android = /Android/i.test(navigator.userAgent)
 
@@ -125,11 +123,10 @@
   </div>
 </Section>
 
-<Group title="파일">
+<Section title="파일">
   <Row
     label="템플릿 폴더"
     hint="새 노트 템플릿 폴더입니다."
-    icon="lucide:layout-template"
   >
     <input
       class="input input-sm w-44"
@@ -143,7 +140,6 @@
   <Row
     label="기존 메모 가져오기"
     hint="이전 버전 메모를 볼트에 파일로 저장합니다."
-    icon="lucide:file-input"
   >
     <button
       class="btn btn-sm"
@@ -158,7 +154,7 @@
       {/if}
     </button>
   </Row>
-</Group>
+</Section>
 
 {#if message}
   <p class="-mt-5 text-xs text-success">{message}</p>

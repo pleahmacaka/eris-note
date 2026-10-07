@@ -1,5 +1,8 @@
+import {
+  applyAppearance as applyLook,
+  type Appearance as Look,
+} from "@eris/settings"
 import { isRecord } from "./data/guards"
-import type { Appearance, ThemeMode } from "./settings"
 
 export const STYLE_TOKENS = [
   "base-100",
@@ -58,26 +61,13 @@ export const readStyle = (text: string): FollowedStyle | null => {
   return { mode: parsed.mode, colors }
 }
 
-export const resolveMode = (mode: ThemeMode): "dark" | "light" => {
-  if (mode !== "system") {
-    return mode
-  }
-
-  return window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? "dark"
-    : "light"
-}
-
-export const applyAppearance = (
-  appearance: Appearance,
+export const applyAppearance = async (
+  look: Look,
   followed: FollowedStyle | null,
 ) => {
-  const root = document.documentElement
-  const mode = followed?.mode ?? resolveMode(appearance.mode)
+  await applyLook({ ...look, mode: followed?.mode ?? look.mode })
 
-  root.dataset.theme = mode === "light" ? "arixlab-light" : "arixlab"
-  root.dataset.mode = mode
-  root.style.setProperty("--font-scale", String(appearance.fontScale))
+  const root = document.documentElement
 
   for (const token of STYLE_TOKENS) {
     const color = followed?.colors[token]

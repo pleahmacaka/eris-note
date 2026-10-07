@@ -1,3 +1,4 @@
+import { erisStyle as sharedStyle } from "@eris/ui"
 import { localRecords, onDataChange } from "../data/store"
 import { ensureDevice } from "../device"
 import { erisBridgePublish, erisBridgeRead } from "../platform/eris"
@@ -59,6 +60,7 @@ export const startErisLink = () => {
     if (text !== styled) {
       styled = text
       erisStyle.value = text === null ? null : readStyle(text)
+      sharedStyle.linked = erisStyle.value !== null
     }
   }
 

@@ -1,12 +1,10 @@
 <script lang="ts">
+  import { Row, Section } from "@eris/ui"
   import { NOTE_SCHEME } from "$lib/bridge"
   import Icon from "@iconify/svelte"
-  import Section from "$lib/components/ui/Section.svelte"
   import { openExternal } from "$lib/platform/links"
   import { appVersion } from "$lib/platform/runtime"
   import { device } from "$lib/settings.svelte"
-  import Group from "./Group.svelte"
-  import Row from "./Row.svelte"
 
   const SITE = "https://arixlab.com/note"
 
@@ -40,39 +38,37 @@
   </div>
 </Section>
 
-<Group title="Eris 연동">
+<Section title="Eris 연동">
   <Row
     label="일정 공유"
     hint="Eris와 캘린더 일정을 동기화합니다."
-    icon="lucide:calendar-sync"
   />
   <Row
     label="노트 인용"
     hint="Eris 일정의 노트 링크를 Note에서 엽니다."
-    icon="lucide:quote"
   >
     <code class="border border-base-content/10 px-2 py-0.5 text-xs text-primary">
       {NOTE_SCHEME}://
     </code>
   </Row>
-</Group>
+</Section>
 
-<Group title="이 앱">
-  <Row label="기기 ID" icon="lucide:fingerprint">
+<Section title="이 앱">
+  <Row label="기기 ID">
     <span class="verbatim max-w-48 truncate text-xs text-base-content/50 select-text">
       {device.value.deviceId || "-"}
     </span>
   </Row>
-  <Row label="웹사이트" hint="arixlab.com/note" icon="lucide:globe">
+  <Row label="웹사이트" hint="arixlab.com/note">
     <button class="btn btn-ghost btn-sm" onclick={() => openExternal(SITE)}>
       열기
       <Icon icon="lucide:arrow-up-right" class="size-4" />
     </button>
   </Row>
-  <Row label="소스 코드" hint="pleahmacaka/arixlab-note" icon="lucide:github">
+  <Row label="소스 코드" hint="pleahmacaka/arixlab-note">
     <button class="btn btn-ghost btn-sm" onclick={() => openExternal(SOURCE)}>
       열기
       <Icon icon="lucide:arrow-up-right" class="size-4" />
     </button>
   </Row>
-</Group>
+</Section>

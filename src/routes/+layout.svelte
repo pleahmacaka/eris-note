@@ -6,6 +6,7 @@
   import { startAutoSync } from "$lib/sync/engine"
   import { erisStyle, startErisLink } from "$lib/sync/eris.svelte"
   import { applyAppearance } from "$lib/theme"
+  import "@eris/markdown/markdown.css"
   import "./layout.css"
 
   const { children } = $props()
@@ -19,7 +20,7 @@
   $effect(() => (isTauri() ? startErisLink() : undefined))
 
   $effect(() => {
-    applyAppearance(device.value.appearance, erisStyle.value)
+    applyAppearance(device.value.look, device.value.followEris ? erisStyle.value : null)
   })
 </script>
 

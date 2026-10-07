@@ -1,8 +1,8 @@
 <script lang="ts">
+  import { Row, Section, Segmented } from "@eris/ui"
   import Icon from "@iconify/svelte"
   import { untrack } from "svelte"
   import ConfirmDialog from "$lib/components/ui/ConfirmDialog.svelte"
-  import Section from "$lib/components/ui/Section.svelte"
   import {
     onP2pPeers,
     type P2pPeer,
@@ -19,9 +19,6 @@
   import { syncNow } from "$lib/sync/engine"
   import { type SyncedCollection, syncedCollections } from "$lib/sync/protocol"
   import { refreshPairing, type SyncState, sync } from "$lib/sync/status.svelte"
-  import Group from "./Group.svelte"
-  import Row from "./Row.svelte"
-  import Segmented from "./Segmented.svelte"
 
   const STATES: Record<SyncState, { label: string; dot: string; text: string }> =
     {
@@ -66,7 +63,7 @@
   }
 
   const INTERVALS = [1, 5, 15, 30, 60].map(minutes => ({
-    id: minutes,
+    value: minutes,
     label: `${minutes}분`,
   }))
 
@@ -462,10 +459,10 @@
     {/if}
   </Section>
 
-  <Group title="동기화 항목">
+  <Section title="동기화 항목">
     {#each syncedCollections as name (name)}
       {@const item = COLLECTIONS[name]}
-      <Row label={item.label} hint={item.hint} icon={item.icon}>
+      <Row label={item.label} hint={item.hint}>
         <input
           type="checkbox"
           class="toggle toggle-primary toggle-sm"
@@ -479,7 +476,6 @@
     <Row
       label="자동 동기화 주기"
       hint="앱 실행 중 동기화 간격입니다."
-      icon="lucide:timer"
     >
       <Segmented
         label="자동 동기화 주기"
@@ -488,7 +484,7 @@
         onchange={minutes => patchSync({ intervalMinutes: minutes })}
       />
     </Row>
-  </Group>
+  </Section>
 {/if}
 
 <ConfirmDialog

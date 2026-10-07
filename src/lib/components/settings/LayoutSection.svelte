@@ -1,14 +1,12 @@
 <script lang="ts">
+  import { Row, Section } from "@eris/ui"
   import Icon from "@iconify/svelte"
-  import Section from "$lib/components/ui/Section.svelte"
   import {
     layout,
     PANELS,
     type PanelId,
     resetLayout,
   } from "$lib/workspace/layout.svelte"
-  import Group from "./Group.svelte"
-  import Row from "./Row.svelte"
 
   let done = $state(false)
 
@@ -60,7 +58,7 @@
 
 <Section
   title="패널 배치"
-  hint="아이콘과 탭을 끌어 위치를 바꿉니다."
+  description="탭을 끌어 위치를 바꿉니다."
 >
   <div class="flex flex-col border border-base-content/10" aria-hidden="true">
     <div
@@ -90,11 +88,10 @@
   </div>
 </Section>
 
-<Group title="초기화">
+<Section title="초기화">
   <Row
     label="레이아웃 초기화"
     hint="패널 위치, 너비, 순서를 초기화합니다."
-    icon="lucide:rotate-ccw"
   >
     <button class="btn btn-sm" onclick={reset}>
       {#if done}
@@ -105,4 +102,4 @@
       {/if}
     </button>
   </Row>
-</Group>
+</Section>
