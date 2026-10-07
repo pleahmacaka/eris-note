@@ -1,0 +1,3 @@
+[submodule "eris"]
+	path = eris
+	url = https://github.com/pleahmacaka/eris
