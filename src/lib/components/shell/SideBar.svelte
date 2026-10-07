@@ -4,7 +4,6 @@
   import { rem } from "$lib/ascii/motion"
   import { showMenu } from "$lib/menu/menu.svelte"
   import PanelView from "$lib/components/panels/PanelView.svelte"
-  import ActivityBar from "./ActivityBar.svelte"
   import {
     accept,
     drag,
@@ -115,11 +114,7 @@
 </script>
 
 {#snippet body(panel: PanelId)}
-  {#if side === "left"}
-    <div class="lg:hidden">
-      <ActivityBar horizontal />
-    </div>
-  {:else}
+  {#if panels.length > 1}
     <div
       class="flex h-9 shrink-0 items-stretch border-b border-base-content/10"
       role="tablist"

@@ -37,12 +37,12 @@
     splitPane,
     workspace,
   } from "$lib/workspace/workspace.svelte"
-  import ActivityBar from "./ActivityBar.svelte"
   import Palette from "./Palette.svelte"
   import LayoutView from "./LayoutView.svelte"
   import SideBar from "./SideBar.svelte"
   import StatusBar from "./StatusBar.svelte"
   import TitleBar from "./TitleBar.svelte"
+  import VaultPicker from "./VaultPicker.svelte"
 
   const SAVE_DELAY = 500
 
@@ -69,8 +69,10 @@
 
   const vaultPath = $derived(device.ready ? device.value.vault.path : undefined)
 
+  const needsVault = $derived(vaultPath === null && !isAndroid())
+
   $effect(() => {
-    if (vaultPath !== undefined) {
+    if (vaultPath !== undefined && !needsVault) {
       openVault(vaultPath)
     }
   })
@@ -108,7 +110,7 @@
   })
 
   $effect(() => {
-    JSON.stringify([workspace, layout.docks, layout.actions, layout.width])
+    JSON.stringify([workspace, layout.docks, layout.width])
 
     if (!restored) {
       return
@@ -203,14 +205,13 @@
   oncontextmenu={nativeMenu}
 />
 
+{#if needsVault}
+  <VaultPicker />
+{:else}
 <div class="flex h-dvh flex-col bg-base-200 text-base-content">
   <TitleBar />
 
   <div class="relative flex min-h-0 flex-1">
-    <div class="flex max-lg:hidden">
-      <ActivityBar />
-    </div>
-
     <SideBar side="left" />
 
     <main class="flex min-h-0 min-w-0 flex-1">
@@ -247,6 +248,7 @@
 
   <StatusBar />
 </div>
+{/if}
 
 <Palette />
 <ContextMenu />

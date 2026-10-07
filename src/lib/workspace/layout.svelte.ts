@@ -4,14 +4,6 @@ export type PanelId = "files" | "search" | "backlinks" | "outline"
 
 export type Side = "left" | "right"
 
-export type ActionId =
-  | "new-note"
-  | "new-canvas"
-  | "graph"
-  | "calendar"
-  | "todos"
-  | "palette"
-
 export type PaletteMode =
   | "commands"
   | "files"
@@ -21,7 +13,6 @@ export type PaletteMode =
 
 type Saved = {
   docks: Record<Side, PanelId[]>
-  actions: ActionId[]
   width: Record<Side, number>
 }
 
@@ -34,7 +25,6 @@ export const PANELS: Record<PanelId, { label: string; icon: string }> = {
 
 const DEFAULTS = (): Saved => ({
   docks: { left: ["files", "search"], right: ["backlinks", "outline"] },
-  actions: ["new-note", "new-canvas", "graph", "calendar", "todos", "palette"],
   width: { left: 16, right: 16 },
 })
 
@@ -96,14 +86,6 @@ export const movePanel = (panel: PanelId, side: Side, before?: PanelId) => {
   layout.open[side] = true
 }
 
-export const moveAction = (action: ActionId, before: ActionId | null) => {
-  const rest = layout.actions.filter(a => a !== action)
-  const at = before ? rest.indexOf(before) : -1
-
-  rest.splice(at === -1 ? rest.length : at, 0, action)
-  layout.actions = rest
-}
-
 export const resizeSide = (side: Side, rem: number) => {
   layout.width[side] = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, rem))
 }
@@ -119,7 +101,6 @@ export const resetLayout = () => {
   const fresh = DEFAULTS()
 
   layout.docks = fresh.docks
-  layout.actions = fresh.actions
   layout.width = fresh.width
   layout.active = { left: fresh.docks.left[0], right: fresh.docks.right[0] }
 }
@@ -149,13 +130,8 @@ export const restoreLayout = async () => {
   const left = known(saved.docks?.left, panels)
   const right = known(saved.docks?.right, panels).filter(p => !left.includes(p))
   const missing = panels.filter(p => !left.includes(p) && !right.includes(p))
-  const actions = known(saved.actions, fresh.actions)
 
   layout.docks = { left: [...left, ...missing], right }
-  layout.actions = [
-    ...actions,
-    ...fresh.actions.filter(a => !actions.includes(a)),
-  ]
   layout.width = { ...fresh.width, ...saved.width }
   layout.active = {
     left: layout.docks.left[0] ?? null,
@@ -165,8 +141,8 @@ export const restoreLayout = async () => {
 
 export const persistLayout = async () => {
   const db = await store()
-  const { docks, actions, width } = $state.snapshot(layout)
+  const { docks, width } = $state.snapshot(layout)
 
-  await db.set(KEY, { docks, actions, width } satisfies Saved)
+  await db.set(KEY, { docks, width } satisfies Saved)
   await db.save()
 }

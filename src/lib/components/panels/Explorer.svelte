@@ -10,7 +10,13 @@
   import { accept, endDrag, payload } from "$lib/workspace/drag.svelte"
   import { closePanelsOnNarrow, layout } from "$lib/workspace/layout.svelte"
   import { openPath } from "$lib/workspace/navigate"
-  import { forget, focusedTab, retarget } from "$lib/workspace/workspace.svelte"
+  import { anchorMenu } from "$lib/menu/menu.svelte"
+  import {
+    forget,
+    focusedTab,
+    openView,
+    retarget,
+  } from "$lib/workspace/workspace.svelte"
   import { basename, isNote } from "$lib/vault/paths"
   import { buildTree, type TreeNode } from "$lib/vault/tree"
   import {
@@ -232,6 +238,19 @@
       onclick={() => open.clear()}
     >
       <Icon icon="lucide:chevrons-down-up" class="size-4" />
+    </button>
+    <button
+      class="btn btn-ghost btn-square btn-xs"
+      aria-label="더 보기"
+      title="더 보기"
+      onclick={e =>
+        anchorMenu(e.currentTarget, [
+          { label: "그래프", icon: "lucide:waypoints", run: () => openView("graph") },
+          { label: "캘린더", icon: "lucide:calendar-days", run: () => openView("calendar") },
+          { label: "할 일", icon: "lucide:list-checks", run: () => openView("todos") },
+        ])}
+    >
+      <Icon icon="lucide:ellipsis" class="size-4" />
     </button>
   </div>
 

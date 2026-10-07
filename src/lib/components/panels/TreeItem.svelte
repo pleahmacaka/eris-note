@@ -67,7 +67,7 @@
         : "text-base-content/70 hover:bg-base-content/5",
       target && "bg-primary/15 outline outline-primary/50",
     ]}
-    style:padding-left="{0.5 + depth * 0.875}rem"
+    style:padding-left="{0.375 + depth * 0.625}rem"
     oncontextmenu={e => menu(e, node)}
     ondragstart={e => startDrag(e, "path", node.path)}
     ondragend={endDrag}

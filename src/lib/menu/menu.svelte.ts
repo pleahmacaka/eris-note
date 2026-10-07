@@ -28,6 +28,13 @@ export const showMenu = (event: MouseEvent, items: MenuItem[]) => {
   menu.at = { x: event.clientX, y: event.clientY, items }
 }
 
+export const anchorMenu = (anchor: HTMLElement, items: MenuItem[]) => {
+  const box = anchor.getBoundingClientRect()
+
+  back = anchor
+  menu.at = { x: box.left, y: box.bottom + 4, items }
+}
+
 export const closeMenu = () => {
   const target = back
 

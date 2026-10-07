@@ -1,3 +1,4 @@
+import { type Appearance as Look, standaloneLook } from "@eris/settings"
 import { publish, subscribe } from "./platform/events"
 import { type KeyValueStore, openStore } from "./platform/storage"
 import { type SyncedCollection, syncedCollections } from "./sync/protocol"
@@ -24,20 +25,18 @@ export type SyncSettings = {
 
 export type VaultSettings = {
   path: string | null
+  recent: string[]
   templates: string
-}
-
-export type AdvancedSettings = {
-  scripts: boolean
 }
 
 export type DeviceSettings = {
   deviceId: string
   deviceName: string
   appearance: Appearance
+  followEris: boolean
+  look: Look
   sync: SyncSettings
   vault: VaultSettings
-  advanced: AdvancedSettings
 }
 
 export const defaultAppearance: Appearance = {
@@ -56,20 +55,25 @@ export const defaultSync: SyncSettings = {
 
 export const defaultVault: VaultSettings = {
   path: null,
+  recent: [],
   templates: "templates",
 }
 
-export const defaultAdvanced: AdvancedSettings = {
-  scripts: false,
+export const noteLook: Look = {
+  ...standaloneLook,
+  accentHue: 303,
+  vividness: 0.075,
+  radius: 0,
 }
 
 export const defaultDevice: DeviceSettings = {
   deviceId: "",
   deviceName: "",
   appearance: defaultAppearance,
+  followEris: true,
+  look: noteLook,
   sync: defaultSync,
   vault: defaultVault,
-  advanced: defaultAdvanced,
 }
 
 const FILE = "settings.json"
@@ -88,6 +92,12 @@ const merge = (saved: Partial<DeviceSettings> | undefined): DeviceSettings => ({
   ...defaultDevice,
   ...saved,
   appearance: { ...defaultAppearance, ...saved?.appearance },
+  look: {
+    ...noteLook,
+    mode: saved?.appearance?.mode ?? noteLook.mode,
+    fontScale: saved?.appearance?.fontScale ?? noteLook.fontScale,
+    ...saved?.look,
+  },
   sync: {
     intervalMinutes:
       saved?.sync?.intervalMinutes ?? defaultSync.intervalMinutes,
@@ -99,7 +109,6 @@ const merge = (saved: Partial<DeviceSettings> | undefined): DeviceSettings => ({
     ) as SyncSettings["collections"],
   },
   vault: { ...defaultVault, ...saved?.vault },
-  advanced: { ...defaultAdvanced, ...saved?.advanced },
 })
 
 export const loadDevice = async () =>
@@ -124,6 +133,14 @@ export const patchSync = async (patch: Partial<SyncSettings>) => {
   return saveDevice({ ...device, sync: { ...device.sync, ...patch } })
 }
 
+export const saveStyle = async (
+  style: Pick<DeviceSettings, "followEris" | "look">,
+) => {
+  const device = await loadDevice()
+
+  return saveDevice({ ...device, ...style })
+}
+
 export const patchAppearance = async (patch: Partial<Appearance>) => {
   const device = await loadDevice()
 
@@ -137,12 +154,6 @@ export const patchVault = async (patch: Partial<VaultSettings>) => {
   const device = await loadDevice()
 
   return saveDevice({ ...device, vault: { ...device.vault, ...patch } })
-}
-
-export const patchAdvanced = async (patch: Partial<AdvancedSettings>) => {
-  const device = await loadDevice()
-
-  return saveDevice({ ...device, advanced: { ...device.advanced, ...patch } })
 }
 
 export const enabledCollections = (sync: SyncSettings) =>
