@@ -2,7 +2,7 @@
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Note",
   "mainBinaryName": "Note",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "identifier": "com.arixlab.note",
   "build": {
     "frontendDist": "../build",

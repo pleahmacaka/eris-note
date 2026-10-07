@@ -1,6 +1,6 @@
 [package]
 name = "arixlab-note"
-version = "0.4.0"
+version = "0.5.0"
 description = "Note"
 edition = "2021"
 rust-version = "1.91"
