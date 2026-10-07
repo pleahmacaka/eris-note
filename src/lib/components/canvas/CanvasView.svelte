@@ -1,4 +1,5 @@
 <script lang="ts">
+  import "@eris/markdown/markdown.css"
   import "@xyflow/svelte/dist/base.css"
   import "./canvas.css"
   import { SvelteFlowProvider } from "@xyflow/svelte"

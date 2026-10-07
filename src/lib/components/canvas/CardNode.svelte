@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { openExternal } from "$lib/platform/links"
+  import { renderMarkdown, withoutFrontmatter } from "@eris/markdown"
   import Icon from "@iconify/svelte"
   import {
     Handle,
@@ -8,20 +8,19 @@
     Position,
     useSvelteFlow,
   } from "@xyflow/svelte"
-  import { getContext } from "svelte"
-  import { renderMarkdown } from "$lib/markdown/render"
-  import { resolveLink } from "$lib/vault/links"
+  import { openExternal } from "$lib/platform/links"
   import { basename, isCanvas, isNote, stem } from "$lib/vault/paths"
   import { texts, vault } from "$lib/vault/vault.svelte"
-  import { openView } from "$lib/workspace/workspace.svelte"
-  import type { CardFlowNode } from "./flow"
-  import { type CanvasNode, colorOf, SIDES } from "./jsoncanvas"
+  import { openLink, openPath } from "$lib/workspace/navigate"
+  import { useCanvas } from "./context"
+  import type { CanvasFlowEdge, CardFlowNode } from "./flow"
+  import { colorOf, SIDES } from "./jsoncanvas"
 
   const { id, data, selected }: NodeProps<CardFlowNode> = $props()
 
-  const { updateNodeData } = useSvelteFlow()
+  const canvas = useCanvas()
 
-  const canvasPath = getContext<() => string>("canvas-path")
+  const { updateNodeData } = useSvelteFlow<CardFlowNode, CanvasFlowEdge>()
 
   const POSITIONS = {
     top: Position.Top,
@@ -30,16 +29,11 @@
     left: Position.Left,
   }
 
-  let editing = $state(false)
-  let draft = $state("")
-
   const node = $derived(data.node)
 
   const color = $derived(colorOf(node.color))
 
-  const files = $derived(
-    vault.entries.filter(e => !e.folder).map(e => e.path),
-  )
+  const editing = $derived(canvas.editing === id)
 
   const tint = $derived(
     color
@@ -47,47 +41,52 @@
       : undefined,
   )
 
-  const editable = (value: CanvasNode) =>
-    value.type === "text" || value.type === "group"
+  const opens = (file: string) => isNote(file) || isCanvas(file)
+
+  const exists = (file: string) =>
+    vault.entries.some(e => !e.folder && e.path === file)
+
+  const stopEditing = () => {
+    if (editing) {
+      canvas.edit(null)
+    }
+  }
+
+  const saveText = (text: string) => {
+    stopEditing()
+
+    if (node.type === "text" && text !== node.text) {
+      updateNodeData(id, { node: { ...node, text } })
+    }
+  }
+
+  const saveLabel = (value: string) => {
+    stopEditing()
+
+    const label = value.trim() || undefined
+
+    if (node.type === "group" && label !== node.label) {
+      updateNodeData(id, { node: { ...node, label } })
+    }
+  }
 
   const begin = () => {
-    if (!editable(node)) {
-      return
-    }
-
-    draft = node.type === "text" ? node.text : (node.type === "group" ? (node.label ?? "") : "")
-    editing = true
-  }
-
-  const commit = () => {
-    if (!editing) {
-      return
-    }
-
-    editing = false
-
-    const next =
-      node.type === "text"
-        ? { ...node, text: draft }
-        : node.type === "group"
-          ? { ...node, label: draft }
-          : node
-
-    if (next !== node) {
-      updateNodeData(id, { node: next })
+    if (node.type === "text") {
+      canvas.edit(id)
+    } else if (node.type === "file" && opens(node.file)) {
+      openPath(node.file)
     }
   }
 
-  const openFile = (file: string) => {
-    if (isNote(file)) {
-      openView("note", file)
-    } else if (isCanvas(file)) {
-      openView("canvas", file)
+  const addInside = (e: MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      canvas.addTextAt(e)
     }
   }
 
-  const follow = (e: MouseEvent) => {
-    const anchor = (e.target as Element | null)?.closest("a")
+  const follow = (e: MouseEvent, from: string) => {
+    const anchor =
+      e.target instanceof Element ? e.target.closest("a") : null
 
     if (!anchor) {
       return
@@ -95,23 +94,34 @@
 
     e.preventDefault()
 
-    const target = anchor.dataset.target
+    const newTab = e.ctrlKey || e.metaKey
+    const { target, notePath } = anchor.dataset
 
-    if (!target) {
+    if (target) {
+      openLink(target, from, newTab)
+    } else if (notePath) {
+      openPath(notePath, { newTab })
+    } else {
       openExternal(anchor.getAttribute("href") ?? "")
-
-      return
-    }
-
-    const path = resolveLink(target, canvasPath(), files)
-
-    if (path) {
-      openFile(path)
     }
   }
 
-  const focus = (element: HTMLElement) => {
+  const blurOn =
+    (...keys: string[]) =>
+    (e: KeyboardEvent & { currentTarget: HTMLElement }) => {
+      if (keys.includes(e.key)) {
+        e.currentTarget.blur()
+      }
+    }
+
+  const focusAll = (element: HTMLInputElement) => {
     element.focus()
+    element.select()
+  }
+
+  const focusEnd = (element: HTMLTextAreaElement) => {
+    element.focus()
+    element.setSelectionRange(element.value.length, element.value.length)
   }
 </script>
 
@@ -142,15 +152,18 @@
     style:background-color={color
       ? `color-mix(in oklch, ${color} 6%, transparent)`
       : undefined}
+    role="presentation"
+    ondblclick={addInside}
   >
     <div class="absolute bottom-full left-0 pb-1">
       {#if editing}
         <input
           class="input input-xs nodrag"
-          bind:value={draft}
-          onblur={commit}
-          onkeydown={e => e.key === "Enter" && commit()}
-          use:focus
+          aria-label="그룹 이름"
+          value={node.label ?? ""}
+          onblur={e => saveLabel(e.currentTarget.value)}
+          onkeydown={blurOn("Enter", "Escape")}
+          use:focusAll
         />
       {:else}
         <button
@@ -158,7 +171,7 @@
             "cursor-pointer text-sm font-medium text-base-content/70",
             "transition-colors duration-140 hover:text-base-content",
           ]}
-          ondblclick={begin}
+          ondblclick={() => canvas.edit(id)}
         >
           {node.label || "그룹"}
         </button>
@@ -184,16 +197,17 @@
             "nodrag nowheel size-full resize-none bg-transparent p-3",
             "text-sm leading-relaxed outline-none",
           ]}
-          bind:value={draft}
-          onblur={commit}
-          onkeydown={e => e.key === "Escape" && commit()}
-          use:focus
+          aria-label="카드 내용"
+          value={node.text}
+          onblur={e => saveText(e.currentTarget.value)}
+          onkeydown={blurOn("Escape")}
+          use:focusEnd
         ></textarea>
       {:else}
         <div
-          class="canvas-md nowheel min-h-0 flex-1 overflow-auto p-3 text-sm"
+          class="markdown nowheel min-h-0 flex-1 overflow-auto p-3 text-sm"
           role="presentation"
-          onclick={follow}
+          onclick={e => follow(e, canvas.path)}
         >
           {#if node.text.trim()}
             {@html renderMarkdown(node.text)}
@@ -203,7 +217,7 @@
         </div>
       {/if}
     {:else if node.type === "file"}
-      {@const exists = files.includes(node.file)}
+      {@const found = exists(node.file)}
       <div
         class={[
           "flex shrink-0 items-center gap-2 border-b border-base-content/10",
@@ -217,15 +231,13 @@
           class="size-4 shrink-0 text-base-content/50"
         />
         <span class="min-w-0 flex-1 truncate text-sm font-medium">
-          {isNote(node.file) || isCanvas(node.file)
-            ? stem(node.file)
-            : basename(node.file)}
+          {opens(node.file) ? stem(node.file) : basename(node.file)}
         </span>
-        {#if exists}
+        {#if found && opens(node.file)}
           <button
             class="btn btn-ghost btn-square btn-xs nodrag"
             aria-label="열기"
-            onclick={() => openFile(node.file)}
+            onclick={() => openPath(node.file)}
           >
             <Icon icon="lucide:arrow-up-right" class="size-3.5" />
           </button>
@@ -233,14 +245,14 @@
       </div>
 
       <div
-        class="canvas-md nowheel min-h-0 flex-1 overflow-auto p-3 text-sm"
+        class="markdown nowheel min-h-0 flex-1 overflow-auto p-3 text-sm"
         role="presentation"
-        onclick={follow}
+        onclick={e => follow(e, node.file)}
       >
-        {#if !exists}
+        {#if !found}
           <p class="text-base-content/40">파일 없음</p>
         {:else if isNote(node.file)}
-          {@html renderMarkdown(texts.get(node.file) ?? "")}
+          {@html renderMarkdown(withoutFrontmatter(texts.get(node.file) ?? ""))}
         {/if}
       </div>
     {:else if node.type === "link"}
