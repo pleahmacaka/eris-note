@@ -15,7 +15,6 @@ import {
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown"
 import {
   bracketMatching,
-  HighlightStyle,
   indentOnInput,
   syntaxHighlighting,
 } from "@codemirror/language"
@@ -33,10 +32,12 @@ import {
   keymap,
   placeholder,
 } from "@codemirror/view"
-import { tags } from "@lezer/highlight"
 import { linkText } from "../vault/links"
 import { dirname, isNote } from "../vault/paths"
-import { livePreview } from "./live"
+import { livePreview, touched } from "./live"
+import { mathSyntax } from "./math"
+import { slashCompletion } from "./slash"
+import { highlight, theme } from "./theme"
 
 export type EditorOptions = {
   parent: HTMLElement
@@ -44,123 +45,8 @@ export type EditorOptions = {
   paths: () => readonly string[]
   onChange: (text: string) => void
   onLink: (target: string, newTab: boolean) => void
+  onHref: (href: string, newTab: boolean) => void
 }
-
-const highlight = HighlightStyle.define([
-  { tag: tags.strong, fontWeight: "700" },
-  { tag: tags.emphasis, fontStyle: "italic" },
-  { tag: tags.strikethrough, textDecoration: "line-through" },
-  { tag: tags.heading, fontWeight: "700" },
-  { tag: tags.link, color: "var(--color-primary)" },
-  {
-    tag: tags.url,
-    color: "color-mix(in oklch, currentColor 55%, transparent)",
-  },
-  {
-    tag: tags.monospace,
-    backgroundColor: "color-mix(in oklch, currentColor 8%, transparent)",
-  },
-  {
-    tag: tags.quote,
-    color: "color-mix(in oklch, currentColor 75%, transparent)",
-  },
-  {
-    tag: [tags.processingInstruction, tags.meta, tags.contentSeparator],
-    color: "color-mix(in oklch, currentColor 40%, transparent)",
-  },
-  { tag: tags.keyword, color: "var(--color-primary)" },
-  { tag: tags.string, color: "var(--color-accent)" },
-  { tag: [tags.number, tags.bool], color: "var(--color-success)" },
-  {
-    tag: tags.comment,
-    color: "color-mix(in oklch, currentColor 50%, transparent)",
-  },
-])
-
-const theme = EditorView.theme({
-  "&": { height: "100%", backgroundColor: "transparent" },
-  "&.cm-focused": { outline: "none" },
-  ".cm-scroller": { fontFamily: "inherit", lineHeight: "1.75" },
-  ".cm-content": {
-    maxWidth: "46rem",
-    margin: "0 auto",
-    padding: "1.5rem 1.5rem 40vh",
-    caretColor: "var(--color-primary)",
-  },
-  ".cm-cursor": { borderLeftColor: "var(--color-primary)" },
-  ".cm-selectionBackground, &.cm-focused .cm-selectionBackground": {
-    backgroundColor:
-      "color-mix(in oklch, var(--color-primary) 28%, transparent)",
-  },
-  ".cm-h1": { fontSize: "1.9em", lineHeight: "1.4" },
-  ".cm-h2": { fontSize: "1.55em", lineHeight: "1.4" },
-  ".cm-h3": { fontSize: "1.3em" },
-  ".cm-h4": { fontSize: "1.12em" },
-  ".cm-quote": {
-    borderLeft: "0.1875rem solid var(--color-primary)",
-    paddingLeft: "0.75rem",
-  },
-  ".cm-bullet": { color: "var(--color-primary)", fontWeight: "700" },
-  ".cm-task": { verticalAlign: "middle", marginRight: "0.25rem" },
-  ".cm-rule": {
-    display: "inline-block",
-    width: "100%",
-    verticalAlign: "middle",
-    borderTop:
-      "0.0625rem solid color-mix(in oklch, currentColor 20%, transparent)",
-  },
-  ".cm-wikilink": {
-    color: "var(--color-primary)",
-    cursor: "pointer",
-    textDecoration: "underline",
-    textDecorationColor:
-      "color-mix(in oklch, var(--color-primary) 40%, transparent)",
-    textUnderlineOffset: "0.2em",
-  },
-  ".cm-panels": {
-    backgroundColor: "var(--color-base-100)",
-    color: "inherit",
-  },
-  ".cm-panels-top": {
-    borderBottom:
-      "0.0625rem solid color-mix(in oklch, currentColor 10%, transparent)",
-  },
-  ".cm-search": { fontSize: "0.8125rem", padding: "0.375rem 0.75rem" },
-  ".cm-search input, .cm-search button": {
-    fontFamily: "inherit",
-    fontSize: "inherit",
-    border:
-      "0.0625rem solid color-mix(in oklch, currentColor 15%, transparent)",
-    background: "var(--color-base-200)",
-    color: "inherit",
-    borderRadius: "0",
-  },
-  ".cm-searchMatch": {
-    backgroundColor:
-      "color-mix(in oklch, var(--color-warning) 30%, transparent)",
-  },
-  ".cm-searchMatch-selected": {
-    backgroundColor:
-      "color-mix(in oklch, var(--color-primary) 40%, transparent)",
-  },
-  ".cm-selectionMatch": {
-    backgroundColor:
-      "color-mix(in oklch, var(--color-primary) 14%, transparent)",
-  },
-  ".cm-placeholder": {
-    color: "color-mix(in oklch, currentColor 35%, transparent)",
-  },
-  ".cm-tooltip": {
-    border:
-      "0.0625rem solid color-mix(in oklch, currentColor 12%, transparent)",
-    backgroundColor: "var(--color-base-100)",
-  },
-  ".cm-tooltip-autocomplete ul li[aria-selected]": {
-    backgroundColor:
-      "color-mix(in oklch, var(--color-primary) 25%, transparent)",
-    color: "inherit",
-  },
-})
 
 const wikilinkCompletion =
   (paths: () => readonly string[]) => (context: CompletionContext) => {
@@ -193,21 +79,8 @@ const wikilinkCompletion =
     return { from: before.from + 2, options, validFor: /^[^\]\n|]*$/ }
   }
 
-const editingLine = (view: EditorView, pos: number) => {
-  const line = view.state.doc.lineAt(pos).number
-
-  return (
-    view.hasFocus &&
-    view.state.selection.ranges.some(
-      r =>
-        view.state.doc.lineAt(r.from).number <= line &&
-        line <= view.state.doc.lineAt(r.to).number,
-    )
-  )
-}
-
-const toggleTask = (view: EditorView, target: HTMLElement) => {
-  const pos = view.posAtDOM(target)
+const toggleTask = (view: EditorView, box: HTMLElement) => {
+  const pos = view.posAtDOM(box)
   const marker = view.state.sliceDoc(pos, pos + 3)
 
   if (!/^\[[ xX]\]$/.test(marker)) {
@@ -225,6 +98,57 @@ const toggleTask = (view: EditorView, target: HTMLElement) => {
   return true
 }
 
+const followLink = (
+  view: EditorView,
+  link: HTMLElement,
+  newTab: boolean,
+  options: EditorOptions,
+) => {
+  const { target, href } = link.dataset
+
+  if (!target && !href) {
+    return false
+  }
+
+  if (!newTab && touched(view.state, view.posAtDOM(link))) {
+    return false
+  }
+
+  if (target) {
+    options.onLink(target, newTab)
+  } else if (href) {
+    options.onHref(href, newTab)
+  }
+
+  return true
+}
+
+const clicks = (options: EditorOptions) =>
+  EditorView.domEventHandlers({
+    mousedown: (event, view) => {
+      if (event.button !== 0 || !(event.target instanceof HTMLElement)) {
+        return false
+      }
+
+      if (event.target.classList.contains("cm-task")) {
+        event.preventDefault()
+
+        return toggleTask(view, event.target)
+      }
+
+      const link = event.target.closest<HTMLElement>(".cm-link")
+      const newTab = event.ctrlKey || event.metaKey
+
+      if (!link || !followLink(view, link, newTab, options)) {
+        return false
+      }
+
+      event.preventDefault()
+
+      return true
+    },
+  })
+
 export const createEditor = (options: EditorOptions) =>
   new EditorView({
     parent: options.parent,
@@ -238,7 +162,7 @@ export const createEditor = (options: EditorOptions) =>
         bracketMatching(),
         closeBrackets(),
         autocompletion({
-          override: [wikilinkCompletion(options.paths)],
+          override: [wikilinkCompletion(options.paths), slashCompletion],
           icons: false,
         }),
         keymap.of([
@@ -251,7 +175,11 @@ export const createEditor = (options: EditorOptions) =>
         ]),
         search({ top: true }),
         highlightSelectionMatches(),
-        markdown({ base: markdownLanguage, codeLanguages: languages }),
+        markdown({
+          base: markdownLanguage,
+          codeLanguages: languages,
+          extensions: [mathSyntax],
+        }),
         syntaxHighlighting(highlight),
         livePreview,
         EditorView.lineWrapping,
@@ -262,34 +190,7 @@ export const createEditor = (options: EditorOptions) =>
             options.onChange(update.state.doc.toString())
           }
         }),
-        EditorView.domEventHandlers({
-          mousedown: (event, view) => {
-            const target = event.target as HTMLElement
-
-            if (target.classList.contains("cm-task")) {
-              event.preventDefault()
-
-              return toggleTask(view, target)
-            }
-
-            const link = target.closest<HTMLElement>(".cm-wikilink")
-
-            if (!link?.dataset.target) {
-              return false
-            }
-
-            const modified = event.ctrlKey || event.metaKey
-
-            if (!modified && editingLine(view, view.posAtDOM(link))) {
-              return false
-            }
-
-            event.preventDefault()
-            options.onLink(link.dataset.target, modified)
-
-            return true
-          },
-        }),
+        clicks(options),
       ],
     }),
   })

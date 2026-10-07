@@ -1,6 +1,5 @@
 <script lang="ts">
   import type { EditorView } from "@codemirror/view"
-  import Icon from "@iconify/svelte"
   import { onMount } from "svelte"
   import { editorMenu } from "$lib/editor/menu"
   import { editors } from "$lib/editor/registry"
@@ -15,9 +14,8 @@
     saveFile,
     texts,
   } from "$lib/vault/vault.svelte"
-  import { filePaths, openLink } from "$lib/workspace/navigate"
+  import { filePaths, openHref, openLink } from "$lib/workspace/navigate"
   import { retarget } from "$lib/workspace/workspace.svelte"
-  import ReadingView from "./ReadingView.svelte"
 
   const { tabId, path }: { tabId: string; path: string } = $props()
 
@@ -25,9 +23,7 @@
 
   let host: HTMLDivElement
   let view: EditorView | null = null
-  let text = $state("")
-  let loaded = $state(false)
-  let reading = $state(false)
+  let text = ""
   let failure = $state("")
   let pending: ReturnType<typeof setTimeout> | undefined
 
@@ -77,11 +73,6 @@
             icon: "lucide:clipboard-paste",
             run: () => (layout.palette = "insert-template"),
           },
-          {
-            label: "읽기 모드",
-            icon: "lucide:book-open",
-            run: () => (reading = true),
-          },
         ])
       : []
 
@@ -95,7 +86,6 @@
         }
 
         text = initial
-        loaded = true
         view = createEditor({
           parent: host,
           doc: initial,
@@ -103,6 +93,9 @@
           onChange: changed,
           onLink: (target, newTab) => {
             openLink(target, path, newTab).catch(fail)
+          },
+          onHref: (href, newTab) => {
+            openHref(href, newTab).catch(fail)
           },
         })
         editors.set(tabId, view)
@@ -133,10 +126,10 @@
 </script>
 
 <div class="flex min-h-0 flex-1 flex-col bg-base-100">
-  <div class="mx-auto flex w-full max-w-184 items-center gap-2 px-6 pt-5">
+  <div class="mx-auto w-full max-w-184 px-6 pt-5">
     <input
       class={[
-        "min-w-0 flex-1 bg-transparent text-2xl font-bold tracking-tight",
+        "w-full bg-transparent text-2xl font-bold tracking-tight",
         "outline-none placeholder:text-base-content/30",
       ]}
       value={stem(path)}
@@ -149,18 +142,6 @@
         }
       }}
     />
-
-    <button
-      class="btn btn-ghost btn-square btn-sm"
-      aria-label={reading ? "편집 모드" : "읽기 모드"}
-      title={reading ? "편집 모드" : "읽기 모드"}
-      onclick={() => (reading = !reading)}
-    >
-      <Icon
-        icon={reading ? "lucide:pencil-line" : "lucide:book-open"}
-        class="size-4"
-      />
-    </button>
   </div>
 
   {#if failure}
@@ -172,14 +153,8 @@
   <div class="relative min-h-0 flex-1">
     <div
       bind:this={host}
-      class={["absolute inset-0 overflow-hidden", reading && "invisible"]}
+      class="absolute inset-0 overflow-hidden"
       use:contextmenu={menuItems}
     ></div>
-
-    {#if reading && loaded}
-      <div class="absolute inset-0 overflow-y-auto bg-base-100">
-        <ReadingView {text} {path} />
-      </div>
-    {/if}
   </div>
 </div>

@@ -1,3 +1,5 @@
+import { citedPath } from "../markdown/cite"
+import { openExternal } from "../platform/links"
 import { resolveLink } from "../vault/links"
 import { isCanvas } from "../vault/paths"
 import { createFile, vault } from "../vault/vault.svelte"
@@ -29,4 +31,14 @@ export const openLink = async (
   const resolved = resolveLink(target, from, filePaths())
 
   openPath(resolved ?? (await createFile("", target, ".md")), { newTab })
+}
+
+export const openHref = async (href: string, newTab = false) => {
+  const cited = citedPath(href)
+
+  if (cited) {
+    openPath(cited, { newTab })
+  } else {
+    await openExternal(href)
+  }
 }

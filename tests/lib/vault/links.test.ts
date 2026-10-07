@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test"
+import { parseLinks } from "@eris/markdown"
 import {
   backlinks,
   linkText,
   outgoing,
-  parseLinks,
   resolveLink,
 } from "../../../src/lib/vault/links"
 
