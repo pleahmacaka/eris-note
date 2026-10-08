@@ -1,7 +1,7 @@
 <script lang="ts">
   import Icon from "@iconify/svelte"
   import { citedPath } from "$lib/markdown/cite"
-  import { renderMarkdown } from "$lib/markdown/render"
+  import { renderMarkdown } from "@eris/markdown"
   import { attachmentUrl, readAttachment } from "$lib/vault/attachments"
   import { resolveLink } from "$lib/vault/links"
   import {
