@@ -36,6 +36,7 @@ import { linkText } from "../vault/links"
 import { dirname, isNote } from "../vault/paths"
 import { livePreview, touched } from "./live"
 import { mathSyntax } from "./math"
+import { formatKeymap } from "./blocks"
 import { slashCompletion } from "./slash"
 import { highlight, theme } from "./theme"
 
@@ -165,6 +166,7 @@ export const createEditor = (options: EditorOptions) =>
           override: [wikilinkCompletion(options.paths), slashCompletion],
           icons: false,
         }),
+        formatKeymap,
         keymap.of([
           ...closeBracketsKeymap,
           ...defaultKeymap,
