@@ -68,6 +68,7 @@
     "@xyflow/svelte": "^1.7.0",
     "codemirror": "^6.0.2",
     "d3-force": "^3.0.0",
+    "date-holidays": "3.36.1",
     "es-toolkit": "^1.52.0",
     "filenamify": "^7.0.3",
     "layerchart": "^2.5.0",

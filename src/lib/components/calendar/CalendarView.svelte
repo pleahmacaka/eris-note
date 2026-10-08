@@ -7,6 +7,7 @@
     monthGrid,
     startOfDay,
   } from "$lib/data/calendar"
+  import { holidayCheck, loadHolidays } from "$lib/data/holidays"
   import { live } from "$lib/data/live.svelte"
   import { events, todos } from "$lib/data/store"
   import type { CalendarEvent } from "$lib/data/types"
@@ -40,7 +41,15 @@
       cursor.getMonth() === today.getMonth(),
   )
 
-  const eventsOnDay = (day: Date) => eventsOn(eventStore.items, day)
+  let isHoliday = $state<ReturnType<typeof holidayCheck>>()
+
+  $effect(() => {
+    if (!isHoliday && eventStore.items.some(e => e.shift)) {
+      loadHolidays().then(() => (isHoliday = holidayCheck()))
+    }
+  })
+
+  const eventsOnDay = (day: Date) => eventsOn(eventStore.items, day, isHoliday)
 
   const todosOn = (day: Date) =>
     todoStore.items.filter(t => (t.due ?? "").slice(0, 10) === dateKey(day))

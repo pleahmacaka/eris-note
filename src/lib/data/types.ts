@@ -22,6 +22,8 @@ export type Recurrence =
   | "monthly"
   | "yearly"
 
+export type Shift = "next" | "previous"
+
 export type CalendarEvent = {
   id: string
   title: string
@@ -32,10 +34,25 @@ export type CalendarEvent = {
   color: string | null
   reminderMinutes: number | null
   recurrence: Recurrence
+  order?: number
+  tags?: string[]
+  parentId?: string | null
+  exdates?: string[]
+  until?: string | null
+  shift?: Shift
+  seriesId?: string | null
+  originalDate?: string | null
   task?: boolean
   done?: string[]
+  notesSync?: boolean
+  group?: string | null
   createdAt: number
   updatedAt: number
+}
+
+export type Occurrence = CalendarEvent & {
+  seriesDate?: string
+  shiftedFrom?: string
 }
 
 export type Note = {

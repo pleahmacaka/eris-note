@@ -3,7 +3,10 @@ import {
   dateKey,
   eventsOn,
   formatRange,
+  isDone,
   monthGrid,
+  notesShared,
+  occurrences,
   parseQuickEvent,
   upcoming,
 } from "../../../src/lib/data/calendar"
@@ -235,5 +238,85 @@ describe("formatRange", () => {
 
   test("same day times", () => {
     expect(formatRange(event())).toMatch(/^9:00\sAM – 10:00\sAM$/)
+  })
+})
+
+describe("series rules shared with Eris", () => {
+  const monthly = event({
+    start: "2026-09-25",
+    end: "2026-09-25",
+    allDay: true,
+    recurrence: "monthly",
+  })
+
+  const keys = (e: CalendarEvent, from: string, to: string) =>
+    occurrences(e, new Date(`${from}T00:00`), new Date(`${to}T00:00`)).map(
+      o => o.start,
+    )
+
+  test("exdates drop a single occurrence", () => {
+    expect(
+      keys({ ...monthly, exdates: ["2026-10-25"] }, "2026-09-01", "2026-12-01"),
+    ).toEqual(["2026-09-25", "2026-11-25"])
+  })
+
+  test("until ends the series inclusively", () => {
+    expect(
+      keys({ ...monthly, until: "2026-10-25" }, "2026-09-01", "2027-01-01"),
+    ).toEqual(["2026-09-25", "2026-10-25"])
+  })
+
+  test("shift next moves a weekend occurrence to monday", () => {
+    const found = occurrences(
+      { ...monthly, shift: "next" },
+      new Date(2026, 9, 1),
+      new Date(2026, 10, 1),
+    )
+
+    expect(found.map(o => [o.start, o.seriesDate, o.shiftedFrom])).toEqual([
+      ["2026-10-26", "2026-10-25", "2026-10-25"],
+    ])
+  })
+
+  test("shift previous honors a holiday check", () => {
+    const holiday = (d: Date) => dateKey(d) === "2026-11-25"
+    const found = occurrences(
+      { ...monthly, shift: "previous" },
+      new Date(2026, 10, 1),
+      new Date(2026, 11, 1),
+      holiday,
+    )
+
+    expect(found.map(o => o.start)).toEqual(["2026-11-24"])
+  })
+
+  test("done is keyed by the series date of a shifted occurrence", () => {
+    const [moved] = occurrences(
+      { ...monthly, shift: "next", task: true, done: ["2026-10-25"] },
+      new Date(2026, 9, 1),
+      new Date(2026, 10, 1),
+    )
+
+    expect(isDone(moved)).toBe(true)
+  })
+})
+
+describe("notesShared", () => {
+  const series = event({ id: "s", recurrence: "weekly", notesSync: true })
+  const child = event({ id: "c", seriesId: "s", originalDate: "2026-09-09" })
+
+  test("copies edited notes across a synced series", () => {
+    const edited = { ...child, notes: "memo" }
+    const out = notesShared(edited, [series, edited], 5)
+
+    expect(out.map(e => [e.id, e.notes, e.updatedAt])).toEqual([
+      ["s", "memo", 5],
+    ])
+  })
+
+  test("leaves an unsynced series alone", () => {
+    const edited = { ...series, notesSync: false, notes: "memo" }
+
+    expect(notesShared(edited, [edited, child], 5)).toEqual([])
   })
 })
