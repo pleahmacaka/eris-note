@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="0dp"
+    android:layout_height="match_parent"
+    android:layout_weight="1"
+    android:orientation="vertical"
+    android:paddingHorizontal="1dp">
+
+    <TextView
+        android:id="@+id/cell_day"
+        android:layout_width="22dp"
+        android:layout_height="22dp"
+        android:layout_gravity="center_horizontal"
+        android:gravity="center"
+        android:shadowColor="#99000000"
+        android:shadowRadius="3"
+        android:textSize="12sp" />
+
+    <TextView
+        android:id="@+id/cell_events"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:maxLines="3"
+        android:shadowColor="#99000000"
+        android:shadowRadius="3"
+        android:textColor="#E6FFFFFF"
+        android:textSize="9sp" />
+</LinearLayout>
