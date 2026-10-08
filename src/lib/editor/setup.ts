@@ -33,10 +33,10 @@ import {
   placeholder,
 } from "@codemirror/view"
 import { linkText } from "../vault/links"
-import { dirname, isNote } from "../vault/paths"
+import { dirname } from "../vault/paths"
+import { formatKeymap } from "./blocks"
 import { livePreview, touched } from "./live"
 import { mathSyntax } from "./math"
-import { formatKeymap } from "./blocks"
 import { slashCompletion } from "./slash"
 import { highlight, theme } from "./theme"
 
@@ -59,7 +59,7 @@ const wikilinkCompletion =
 
     const all = paths()
 
-    const options: Completion[] = all.filter(isNote).map(path => {
+    const options: Completion[] = all.map(path => {
       const label = linkText(path, all)
 
       return {
