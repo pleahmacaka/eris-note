@@ -60,3 +60,13 @@
     scroll-behavior: auto !important;
   }
 }
+
+@media (pointer: coarse) {
+  .btn-square.btn-sm {
+    --size: 2.5rem;
+  }
+
+  .btn-square.btn-xs {
+    --size: 2.25rem;
+  }
+}

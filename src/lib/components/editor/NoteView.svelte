@@ -16,13 +16,14 @@
   } from "$lib/vault/vault.svelte"
   import { filePaths, openHref, openLink } from "$lib/workspace/navigate"
   import { retarget } from "$lib/workspace/workspace.svelte"
+  import KeyboardBar from "./KeyboardBar.svelte"
 
   const { tabId, path }: { tabId: string; path: string } = $props()
 
   const SAVE_DELAY = 400
 
   let host: HTMLDivElement
-  let view: EditorView | null = null
+  let view = $state.raw<EditorView | null>(null)
   let text = ""
   let failure = $state("")
   let pending: ReturnType<typeof setTimeout> | undefined
@@ -157,4 +158,8 @@
       use:contextmenu={menuItems}
     ></div>
   </div>
+
+  {#if view}
+    <KeyboardBar {view} />
+  {/if}
 </div>
