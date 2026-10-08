@@ -1,9 +1,10 @@
 import { type KeyValueStore, openStore } from "../platform/storage"
-import { stem } from "../vault/paths"
+import { displayName, fileIcon } from "../vault/paths"
 
 export type ViewKind =
   | "note"
   | "canvas"
+  | "file"
   | "graph"
   | "calendar"
   | "todos"
@@ -26,10 +27,12 @@ type Saved = { root?: Region; panes?: Pane[]; focus: string }
 const FILE = "settings.json"
 const KEY = "workspace"
 const SINGLETONS: ViewKind[] = ["graph", "calendar", "todos", "settings"]
+const FILE_KINDS: ViewKind[] = ["note", "canvas", "file"]
 
 const LABELS: Record<ViewKind, string> = {
   note: "노트",
   canvas: "캔버스",
+  file: "파일",
   graph: "그래프",
   calendar: "캘린더",
   todos: "할 일",
@@ -39,6 +42,7 @@ const LABELS: Record<ViewKind, string> = {
 const ICONS: Record<ViewKind, string> = {
   note: "lucide:file-text",
   canvas: "lucide:layout-dashboard",
+  file: "lucide:file",
   graph: "lucide:waypoints",
   calendar: "lucide:calendar-days",
   todos: "lucide:list-checks",
@@ -145,9 +149,10 @@ const removePane = (pane: Pane) => {
 }
 
 export const tabTitle = (tab: Tab) =>
-  tab.path ? stem(tab.path) : LABELS[tab.kind]
+  tab.path ? displayName(tab.path) : LABELS[tab.kind]
 
-export const tabIcon = (tab: Tab) => ICONS[tab.kind]
+export const tabIcon = (tab: Tab) =>
+  tab.kind === "file" && tab.path ? fileIcon(tab.path) : ICONS[tab.kind]
 
 export const activeTab = (pane: Pane) =>
   pane.tabs.find(t => t.id === pane.active) ?? null
@@ -204,8 +209,8 @@ export const openView = (
   const replace =
     !options.newTab &&
     current !== null &&
-    (current.kind === "note" || current.kind === "canvas") &&
-    (kind === "note" || kind === "canvas")
+    FILE_KINDS.includes(current.kind) &&
+    FILE_KINDS.includes(kind)
 
   if (replace && current) {
     current.kind = kind

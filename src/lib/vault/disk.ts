@@ -3,6 +3,7 @@ import {
   exists,
   mkdir,
   readDir,
+  readFile,
   readTextFile,
   remove,
   rename,
@@ -10,7 +11,7 @@ import {
   watch,
   writeTextFile,
 } from "@tauri-apps/plugin-fs"
-import { dirname, filePath, folderPath, join } from "./paths"
+import { anyFilePath, dirname, filePath, folderPath, join } from "./paths"
 
 export type Entry = { path: string; folder: boolean }
 
@@ -32,7 +33,7 @@ const relative = (root: string, absolutePath: string) => {
 }
 
 const guarded = (path: string, folder: boolean) => {
-  const safe = folder ? folderPath(path) : filePath(path)
+  const safe = folder ? folderPath(path) : anyFilePath(path)
 
   if (safe === null) {
     throw new Error(`허용되지 않는 경로: ${path}`)
@@ -57,7 +58,7 @@ export const listEntries = async (
     if (item.isDirectory && folderPath(path) !== null) {
       entries.push({ path, folder: true })
       entries.push(...(await listEntries(root, path)))
-    } else if (item.isFile && filePath(path) !== null) {
+    } else if (item.isFile && anyFilePath(path) !== null) {
       entries.push({ path, folder: false })
     }
   }
@@ -71,11 +72,22 @@ export const ensureRoot = async (root: string) => {
   }
 }
 
+const textGuarded = (path: string) => {
+  if (filePath(path) === null) {
+    throw new Error(`텍스트 파일이 아닙니다: ${path}`)
+  }
+
+  return guarded(path, false)
+}
+
 export const readText = (root: string, path: string) =>
-  readTextFile(absolute(root, guarded(path, false)))
+  readTextFile(absolute(root, textGuarded(path)))
+
+export const readBytes = (root: string, path: string) =>
+  readFile(absolute(root, guarded(path, false)))
 
 export const writeText = async (root: string, path: string, text: string) => {
-  const safe = guarded(path, false)
+  const safe = textGuarded(path)
   const parent = dirname(safe)
 
   if (parent !== "") {
@@ -87,6 +99,15 @@ export const writeText = async (root: string, path: string, text: string) => {
 
 export const modifiedAt = async (root: string, path: string) =>
   (await stat(absolute(root, guarded(path, false)))).mtime?.getTime() ?? null
+
+export const fileInfo = async (root: string, path: string) => {
+  const info = await stat(absolute(root, guarded(path, false)))
+
+  return { size: info.size, mtime: info.mtime?.getTime() ?? 0 }
+}
+
+export const absolutePath = (root: string, path: string) =>
+  absolute(root, guarded(path, false))
 
 export const makeFolder = (root: string, path: string) =>
   mkdir(absolute(root, guarded(path, true)), { recursive: true })

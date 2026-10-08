@@ -4,6 +4,17 @@ export const NOTE_EXTENSIONS = [".md", ".mdx"] as const
 
 export const TEXT_EXTENSIONS = [...NOTE_EXTENSIONS, ".canvas"] as const
 
+const IMAGE_EXTENSIONS = [
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".gif",
+  ".webp",
+  ".avif",
+  ".bmp",
+  ".svg",
+]
+
 const DRIVE = /^[a-z]:/i
 
 const extensionOf = (path: string) => {
@@ -40,6 +51,9 @@ export const folderPath = (input: string): string | null => {
   return path
 }
 
+export const anyFilePath = (input: string): string | null =>
+  folderPath(input) || null
+
 export const filePath = (input: string): string | null => {
   const path = folderPath(input)
 
@@ -57,6 +71,28 @@ export const isNote = (path: string) =>
   (NOTE_EXTENSIONS as readonly string[]).includes(extensionOf(path))
 
 export const isCanvas = (path: string) => extensionOf(path) === ".canvas"
+
+export const isText = (path: string) =>
+  (TEXT_EXTENSIONS as readonly string[]).includes(extensionOf(path))
+
+export const isPdf = (path: string) => extensionOf(path) === ".pdf"
+
+export const isImage = (path: string) =>
+  IMAGE_EXTENSIONS.includes(extensionOf(path))
+
+export const displayName = (path: string) =>
+  isText(path) ? stem(path) : basename(path)
+
+export const fileIcon = (path: string) =>
+  isNote(path)
+    ? "lucide:file-text"
+    : isCanvas(path)
+      ? "lucide:layout-dashboard"
+      : isPdf(path)
+        ? "lucide:file-type"
+        : isImage(path)
+          ? "lucide:file-image"
+          : "lucide:file"
 
 export const basename = (path: string) => path.slice(path.lastIndexOf("/") + 1)
 

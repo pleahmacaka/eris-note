@@ -1,7 +1,7 @@
 import { citedPath } from "../markdown/cite"
 import { openExternal } from "../platform/links"
 import { resolveLink } from "../vault/links"
-import { isCanvas } from "../vault/paths"
+import { isCanvas, isText } from "../vault/paths"
 import { createFile, vault } from "../vault/vault.svelte"
 import {
   dockPath,
@@ -14,12 +14,15 @@ import {
 export const filePaths = () =>
   vault.entries.filter(e => !e.folder).map(e => e.path)
 
+const kindOf = (path: string) =>
+  isCanvas(path) ? "canvas" : isText(path) ? "note" : "file"
+
 export const openPath = (path: string, options: OpenOptions = {}) =>
-  openView(isCanvas(path) ? "canvas" : "note", path, options)
+  openView(kindOf(path), path, options)
 
 export const dockFile = (path: string, target: Pane, edge: Edge) => {
   if (vault.entries.some(e => e.path === path && !e.folder)) {
-    dockPath(isCanvas(path) ? "canvas" : "note", path, target, edge)
+    dockPath(kindOf(path), path, target, edge)
   }
 }
 

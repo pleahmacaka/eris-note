@@ -1,10 +1,12 @@
 <script lang="ts">
   import { onMount, untrack } from "svelte"
   import { fade } from "svelte/transition"
+  import LinkPreview from "$lib/components/files/LinkPreview.svelte"
   import ContextMenu from "$lib/components/ui/ContextMenu.svelte"
   import { citedPath } from "$lib/markdown/cite"
   import { fieldMenu } from "$lib/menu/edit"
   import { showMenu } from "$lib/menu/menu.svelte"
+  import { startCalendarMirror } from "$lib/platform/android"
   import { onAppLinks } from "$lib/platform/links"
   import { isAndroid } from "$lib/platform/runtime"
   import { device } from "$lib/settings.svelte"
@@ -89,6 +91,12 @@
     }
   }
 
+  $effect(() => {
+    const monday = device.value.appearance.weekStartsMonday
+
+    return untrack(() => startCalendarMirror(monday))
+  })
+
   $effect(() =>
     onVaultChange(change => {
       if (change.external) {
@@ -143,7 +151,7 @@
       return
     }
 
-    if (!command || event.altKey) {
+    if (!command || event.altKey || event.defaultPrevented) {
       return
     }
 
@@ -251,4 +259,5 @@
 {/if}
 
 <Palette />
+<LinkPreview />
 <ContextMenu />

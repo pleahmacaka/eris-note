@@ -1,5 +1,5 @@
 import { NOTE_SCHEME, notePathOf, noteUrl } from "../bridge"
-import { filePath, isNote, stem } from "../vault/paths"
+import { anyFilePath, displayName } from "../vault/paths"
 
 export type Segment = { text: string } | { label: string; path: string }
 
@@ -10,12 +10,13 @@ const CITATION = new RegExp(
 
 export const citeUrl = noteUrl
 
-export const citeLink = (path: string) => `[${stem(path)}](${citeUrl(path)})`
+export const citeLink = (path: string) =>
+  `[${displayName(path)}](${citeUrl(path)})`
 
 export const citedPath = (url: string): string | null => {
   const path = notePathOf(url)
 
-  return path && filePath(path) === path && isNote(path) ? path : null
+  return path && anyFilePath(path) === path ? path : null
 }
 
 export const segments = (text: string): Segment[] => {
@@ -30,7 +31,7 @@ export const segments = (text: string): Segment[] => {
     }
 
     parts.push({ text: text.slice(last, match.index) })
-    parts.push({ label: match[1] || stem(path), path })
+    parts.push({ label: match[1] || displayName(path), path })
     last = match.index + match[0].length
   }
 

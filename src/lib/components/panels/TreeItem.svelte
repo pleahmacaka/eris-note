@@ -1,6 +1,6 @@
 <script lang="ts">
   import Icon from "@iconify/svelte"
-  import { isCanvas, stem } from "$lib/vault/paths"
+  import { displayName, fileIcon } from "$lib/vault/paths"
   import type { TreeNode } from "$lib/vault/tree"
   import { accept, endDrag, startDrag } from "$lib/workspace/drag.svelte"
   import Self from "./TreeItem.svelte"
@@ -35,16 +35,14 @@
 
   const expanded = $derived(node.folder && open.has(node.path))
 
-  const label = $derived(node.folder ? node.name : stem(node.path))
+  const label = $derived(node.folder ? node.name : displayName(node.path))
 
   const icon = $derived(
     node.folder
       ? expanded
         ? "lucide:folder-open"
         : "lucide:folder"
-      : isCanvas(node.path)
-        ? "lucide:layout-dashboard"
-        : "lucide:file-text",
+      : fileIcon(node.path),
   )
 
   const focusInput = (input: HTMLInputElement) => {

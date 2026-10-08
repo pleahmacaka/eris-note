@@ -31,6 +31,14 @@ export const resolveLink = (
 }
 
 export const linkText = (path: string, paths: readonly string[]) => {
+  if (!isNote(path)) {
+    const name = basename(path).toLocaleLowerCase()
+    const unique =
+      paths.filter(p => basename(p).toLocaleLowerCase() === name).length === 1
+
+    return unique ? basename(path) : path
+  }
+
   const name = stem(path)
   const unique =
     paths.filter(p => stem(p).toLocaleLowerCase() === name.toLocaleLowerCase())

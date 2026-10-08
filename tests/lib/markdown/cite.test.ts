@@ -20,9 +20,14 @@ describe("citation links", () => {
     expect(citeLink("a/회의록.md")).toBe(`[회의록](${citeUrl("a/회의록.md")})`)
   })
 
+  test("accept any vault file, not only notes", () => {
+    expect(citedPath(citeUrl("자료/보고서.pdf"))).toBe("자료/보고서.pdf")
+    expect(citeLink("board.canvas")).toBe(`[board](${citeUrl("board.canvas")})`)
+    expect(citeLink("scan.png")).toBe(`[scan.png](${citeUrl("scan.png")})`)
+  })
+
   test.each([
     ["traversal", "arixlab-note://open?path=..%2Fp2p.json"],
-    ["canvas", "arixlab-note://open?path=board.canvas"],
     ["other action", "arixlab-note://delete?path=a.md"],
     ["other scheme", "https://open?path=a.md"],
     ["missing path", "arixlab-note://open"],

@@ -4,6 +4,7 @@
     atMinutes,
     dateKey,
     dateTimeKey,
+    notesShared,
     parseLocal,
     startOfDay,
   } from "$lib/data/calendar"
@@ -11,6 +12,7 @@
   import type { CalendarEvent, Recurrence } from "$lib/data/types"
   import { citeLink, segments } from "$lib/markdown/cite"
   import { layout } from "$lib/workspace/layout.svelte"
+  import { fileIcon } from "$lib/vault/paths"
   import { openPath } from "$lib/workspace/navigate"
   import { colorMeta, eventColors, type EventColor, toColor } from "./colors"
   import { clock, eventSpan, longDay } from "./format"
@@ -102,6 +104,11 @@
     }
 
     await eventStore.put(next)
+
+    if (stored && stored.notes !== next.notes) {
+      await eventStore.putMany(notesShared(next, await eventStore.all(), stamp))
+    }
+
     setEditing(false)
     close()
   }
@@ -310,9 +317,10 @@
                   "border-primary/30 bg-primary/10 px-1.5 align-baseline text-xs",
                   "text-primary hover:bg-primary/20",
                 ]}
+                data-preview-path={part.path}
                 onclick={() => openPath(part.path)}
               >
-                <Icon icon="lucide:file-text" class="size-3" />
+                <Icon icon={fileIcon(part.path)} class="size-3" />
                 {part.label}
               </button>
             {:else}

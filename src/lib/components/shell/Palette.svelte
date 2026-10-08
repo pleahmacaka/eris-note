@@ -1,6 +1,6 @@
 <script lang="ts">
   import Icon from "@iconify/svelte"
-  import { isCanvas, isNote, stem } from "$lib/vault/paths"
+  import { displayName, fileIcon } from "$lib/vault/paths"
   import { type Command, commands, currentFolder } from "$lib/workspace/commands"
   import { layout } from "$lib/workspace/layout.svelte"
   import { filePaths, openPath } from "$lib/workspace/navigate"
@@ -46,9 +46,9 @@
 
   const fromPath = (path: string, run: (newTab: boolean) => unknown): Item => ({
     key: path,
-    label: stem(path),
+    label: displayName(path),
     detail: path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : undefined,
-    icon: isCanvas(path) ? "lucide:layout-dashboard" : "lucide:file-text",
+    icon: fileIcon(path),
     run,
   })
 
@@ -66,9 +66,7 @@
     if (mode === "cite-note") {
       const into = layout.citeInto
 
-      return filePaths()
-        .filter(isNote)
-        .map(path => fromPath(path, () => into?.(path)))
+      return filePaths().map(path => fromPath(path, () => into?.(path)))
     }
 
     if (mode === "insert-template") {

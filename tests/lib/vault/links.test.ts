@@ -88,3 +88,13 @@ describe("graph helpers", () => {
     expect(linkText("sub/b.md", paths)).toBe("sub/b")
   })
 })
+
+describe("attachment links", () => {
+  test("keep the extension so the link resolves back", () => {
+    const paths = ["docs/보고서.pdf", "a.md"]
+    const text = linkText("docs/보고서.pdf", paths)
+
+    expect(text).toBe("보고서.pdf")
+    expect(resolveLink(text, "a.md", paths)).toBe("docs/보고서.pdf")
+  })
+})

@@ -10,6 +10,7 @@
   const note = () => import("$lib/components/editor/NoteView.svelte")
   const canvas = () => import("$lib/components/canvas/CanvasView.svelte")
   const graph = () => import("$lib/components/graph/GraphView.svelte")
+  const file = () => import("$lib/components/files/FileView.svelte")
 
   const openDay = (day: string) => {
     layout.todoDay = day
@@ -37,6 +38,14 @@
       {@render loading()}
     {:then { default: CanvasView }}
       <CanvasView path={tab.path} />
+    {/await}
+  {/key}
+{:else if tab.kind === "file" && tab.path}
+  {#key tab.path}
+    {#await file()}
+      {@render loading()}
+    {:then { default: FileView }}
+      <FileView path={tab.path} />
     {/await}
   {/key}
 {:else if tab.kind === "graph"}
