@@ -31,6 +31,28 @@ mock.module("../../../src/lib/platform/storage", () => ({
 
 mock.module("../../../src/lib/vault/disk", () => ({
   modifiedAt: async (_root: string, path: string) => mtimes.get(path) ?? null,
+  fileInfo: async (_root: string, path: string) => ({
+    size: (files.get(path) ?? "").length,
+    mtime: mtimes.get(path) ?? 0,
+  }),
+  absolutePath: (root: string, path: string) => `${root}/${path}`,
+}))
+
+const added: string[] = []
+const fetched: { hash: string; path: string }[] = []
+const HASH = "ab".repeat(32)
+
+mock.module("../../../src/lib/platform/p2p", () => ({
+  blobAdd: async (path: string) => {
+    added.push(path)
+
+    return HASH
+  },
+  blobFetch: async (hash: string, path: string) => {
+    fetched.push({ hash, path })
+    files.set(path.slice(2), "bytes")
+  },
+  blobRetain: async () => {},
 }))
 
 mock.module("../../../src/lib/vault/vault.svelte", () => ({
@@ -77,6 +99,9 @@ beforeEach(() => {
   for (const data of stores.values()) {
     data.clear()
   }
+
+  added.length = 0
+  fetched.length = 0
 
   files.clear()
   mtimes.clear()
@@ -212,5 +237,33 @@ describe("applyVaultRemote", () => {
 
     expect(changed).toEqual([])
     expect(files.has("note.md")).toBe(false)
+  })
+})
+
+describe("attachments", () => {
+  test("publish a blob hash instead of content, hashing once per change", async () => {
+    put("doc/a.pdf", "%PDF")
+
+    const first = await vaultRecords("me", NOW)
+    const second = await vaultRecords("me", NOW)
+
+    expect(byId(first.records, "doc/a.pdf")?.data).toEqual({
+      blob: HASH,
+      size: 4,
+    })
+    expect(byId(second.records, "doc/a.pdf")?.updatedAt).toBe(
+      byId(first.records, "doc/a.pdf")?.updatedAt,
+    )
+    expect(added).toEqual(["R/doc/a.pdf"])
+  })
+
+  test("fetch a remote blob into the vault", async () => {
+    const changed = await applyVaultRemote(
+      [remote({ id: "b.png", data: { blob: HASH, size: 5 } })],
+      "me",
+    )
+
+    expect(changed).toEqual(["b.png"])
+    expect(fetched).toEqual([{ hash: HASH, path: "R/b.png" }])
   })
 })

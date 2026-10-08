@@ -1,3 +1,4 @@
+mod blobs;
 mod eris;
 mod p2p;
 
@@ -46,6 +47,9 @@ pub fn run() {
             p2p::p2p_publish,
             p2p::p2p_sync,
             p2p::p2p_remove,
+            p2p::blob_add,
+            p2p::blob_fetch,
+            p2p::blob_retain,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Note");

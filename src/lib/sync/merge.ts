@@ -1,6 +1,6 @@
 import { type AppTag, crossesApps, MAX_CLOCK_SKEW } from "../bridge"
 import { isCalendarEvent, isRecord, isTodo } from "../data/guards"
-import { filePath } from "../vault/paths"
+import { anyFilePath, filePath } from "../vault/paths"
 import { isSyncedCollection, MAX_FILE, type SyncRecord } from "./protocol"
 
 export type Versioned = { updatedAt: number; deviceId?: string }
@@ -41,9 +41,19 @@ const isFileData = (value: unknown) =>
     value.base === undefined ||
     typeof value.base === "string")
 
+const isBlobData = (value: unknown) =>
+  isRecord(value) &&
+  typeof value.blob === "string" &&
+  /^[0-9a-f]{64}$/.test(value.blob) &&
+  typeof value.size === "number"
+
 const fitsCollection = (record: SyncRecord) => {
-  if (record.collection === "files" && filePath(record.id) !== record.id) {
+  if (record.collection === "files" && anyFilePath(record.id) !== record.id) {
     return false
+  }
+
+  if (record.collection === "files" && filePath(record.id) !== record.id) {
+    return record.deleted || isBlobData(record.data)
   }
 
   if (record.deleted) {

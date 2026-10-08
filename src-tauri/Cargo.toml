@@ -24,9 +24,11 @@ tauri-plugin-persisted-scope = "2.4.0"
 tauri-plugin-clipboard-manager = "2.4.0"
 tauri-plugin-deep-link = "2.5.0"
 tauri-plugin-opener = "2.6.0"
-iroh = "1.2.0"
+iroh = "1.3"
 data-encoding = "2.11.1"
 tokio = { version = "1", features = ["sync", "time"] }
+iroh-blobs = { version = "0.103", default-features = false, features = ["fs-store"] }
+n0-future = "0.3"
 
 [profile.release]
 codegen-units = 1

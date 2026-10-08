@@ -50,7 +50,11 @@ const publish = async (device: DeviceSettings) => {
   const loaded = vault.ready && vault.error === null && vault.root !== ""
   const files =
     enabled.includes("files") && loaded
-      ? await vaultRecords(device.deviceId)
+      ? await vaultRecords(
+          device.deviceId,
+          Date.now(),
+          (await p2pStatus()).paired,
+        )
       : { records: [], oversized: [] }
   const full = pack(device.deviceId, [...records, ...files.records])
 

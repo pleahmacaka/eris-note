@@ -54,3 +54,11 @@ export const onP2pSnapshot = (handler: (snapshot: string) => void) =>
 
 export const onP2pPeers = (handler: () => void) =>
   listenTo<null>("p2p-peers", () => handler())
+
+export const blobAdd = (path: string) => call<string>("blob_add", { path })
+
+export const blobFetch = (hash: string, path: string) =>
+  call<void>("blob_fetch", { hash, path })
+
+export const blobRetain = (hashes: string[]) =>
+  call<void>("blob_retain", { hashes })

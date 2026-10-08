@@ -11,6 +11,8 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager};
 use tokio::sync::OnceCell;
+
+use crate::blobs::Blobs;
 use tokio::time::timeout;
 
 const ALPN: &[u8] = b"eris/sync/1";
@@ -147,6 +149,7 @@ pub struct Node {
     snapshot: Mutex<Option<String>>,
     sink: Sink,
     router: OnceCell<Router>,
+    blobs: OnceCell<Blobs>,
 }
 
 struct Listener(Arc<Node>);
@@ -199,6 +202,7 @@ impl Node {
             snapshot: Mutex::new(None),
             sink,
             router: OnceCell::new(),
+            blobs: OnceCell::new(),
         };
 
         if fresh {
@@ -298,15 +302,36 @@ impl Node {
                     .await
                     .map_err(fail)?;
 
+                let node = self.clone();
+                let knows = Arc::new(move |peer: &EndpointId| node.lock().knows(&peer.to_string()));
+                let dir = self.file.parent().ok_or("잘못된 경로")?;
+                let (blobs, provider) = Blobs::open(dir, &endpoint, knows).await?;
+
+                let _ = self.blobs.set(blobs);
+
                 Ok::<_, String>(
                     Router::builder(endpoint)
                         .accept(ALPN, Listener(self.clone()))
+                        .accept(iroh_blobs::ALPN, provider)
                         .spawn(),
                 )
             })
             .await?;
 
         Ok(router.endpoint().clone())
+    }
+
+    async fn blobs(self: &Arc<Self>) -> Result<&Blobs, String> {
+        self.endpoint().await?;
+        self.blobs.get().ok_or_else(|| "blob store unavailable".into())
+    }
+
+    fn chain_peers(&self) -> Vec<EndpointId> {
+        self.lock()
+            .peers
+            .iter()
+            .filter_map(|peer| peer.node_id.parse().ok())
+            .collect()
     }
 
     async fn invite(self: &Arc<Self>, name: String) -> Result<String, String> {
@@ -780,4 +805,22 @@ pub async fn p2p_remove(app: AppHandle, node_id: String) -> Result<(), String> {
 
     node.remove(node_id)?;
     node.sync().await.map(|_| ())
+}
+
+#[tauri::command(async)]
+pub async fn blob_add(app: AppHandle, path: String) -> Result<String, String> {
+    node(&app)?.blobs().await?.add(PathBuf::from(path)).await
+}
+
+#[tauri::command(async)]
+pub async fn blob_fetch(app: AppHandle, hash: String, path: String) -> Result<(), String> {
+    let node = node(&app)?;
+    let peers = node.chain_peers();
+
+    node.blobs().await?.fetch(&hash, Path::new(&path), peers).await
+}
+
+#[tauri::command(async)]
+pub async fn blob_retain(app: AppHandle, hashes: Vec<String>) -> Result<(), String> {
+    node(&app)?.blobs().await?.retain(hashes).await
 }

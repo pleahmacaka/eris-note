@@ -23,6 +23,8 @@ export type SyncRecord = {
 
 export type FileData = { content: string; base: string | null }
 
+export type BlobData = { blob: string; size: number }
+
 export type Snapshot = {
   deviceId: string
   app: AppTag

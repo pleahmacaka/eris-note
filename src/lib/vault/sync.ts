@@ -1,13 +1,15 @@
+import { blobAdd, blobFetch, blobRetain } from "../platform/p2p"
 import { type KeyValueStore, openStore } from "../platform/storage"
 import { isPoisoned, remoteWins } from "../sync/merge"
 import {
+  type BlobData,
   type FileData,
   MAX_FILE,
   type SyncRecord,
   TOMBSTONE_TTL,
 } from "../sync/protocol"
-import { modifiedAt } from "./disk"
-import { sameIgnoringCase } from "./paths"
+import { absolutePath, fileInfo, modifiedAt } from "./disk"
+import { isText, sameIgnoringCase } from "./paths"
 import {
   readFile,
   refreshVault,
@@ -23,6 +25,8 @@ type Stamp = {
   hash: string | null
   base: string | null
   deleted: boolean
+  size?: number
+  mtime?: number
 }
 
 const FILE = "files.json"
@@ -63,14 +67,62 @@ const editedAt = async (path: string, now: number) => {
   return mtime === null ? now : Math.min(mtime, now)
 }
 
+// ponytail: a failed fetch is retried only when the peer publishes again
+const fetchBlob = async (hash: string, path: string) => {
+  try {
+    await blobFetch(hash, absolutePath(vault.root, path))
+
+    return true
+  } catch {
+    return false
+  }
+}
+
 export const isEcho = (path: string) => (echoes.get(path) ?? 0) > Date.now()
 
 export type VaultScan = { records: SyncRecord[]; oversized: string[] }
 
 // ponytail: every file is re-read and re-hashed on each publish; use stat mtime once vaults get large
+const blobRecord = async (
+  path: string,
+  stamp: Stamp | undefined,
+  deviceId: string,
+  now: number,
+) => {
+  const info = await fileInfo(vault.root, path)
+  const unchanged =
+    stamp?.hash &&
+    !stamp.deleted &&
+    stamp.size === info.size &&
+    stamp.mtime === info.mtime
+  const hash = unchanged
+    ? (stamp.hash as string)
+    : await blobAdd(absolutePath(vault.root, path))
+
+  const next: Stamp =
+    stamp && !stamp.deleted && stamp.hash === hash
+      ? { ...stamp, size: info.size, mtime: info.mtime }
+      : {
+          id: path,
+          updatedAt: Math.max(
+            Math.min(info.mtime || now, now),
+            (stamp?.updatedAt ?? 0) + 1,
+          ),
+          deviceId,
+          hash,
+          base: null,
+          deleted: false,
+          size: info.size,
+          mtime: info.mtime,
+        }
+
+  return next
+}
+
 export const vaultRecords = async (
   deviceId: string,
   now = Date.now(),
+  withBlobs = true,
 ): Promise<VaultScan> => {
   const db = await store()
   const prefix = keyOf("")
@@ -83,12 +135,43 @@ export const vaultRecords = async (
   const oversized: string[] = []
   const present = new Set<string>()
 
+  const held: string[] = []
+
   for (const entry of vault.entries) {
     if (entry.folder) {
       continue
     }
 
     present.add(entry.path)
+
+    if (!isText(entry.path)) {
+      const stored = known.get(entry.path)
+
+      if (!withBlobs) {
+        continue
+      }
+
+      const stamp = await blobRecord(entry.path, stored, deviceId, now).catch(
+        () => null,
+      )
+
+      if (!stamp?.hash) {
+        continue
+      }
+
+      await db.set(keyOf(entry.path), stamp)
+
+      held.push(stamp.hash)
+      records.push({
+        collection: "files",
+        id: entry.path,
+        updatedAt: stamp.updatedAt,
+        deviceId: stamp.deviceId,
+        deleted: false,
+        data: { blob: stamp.hash, size: stamp.size ?? 0 } satisfies BlobData,
+      })
+      continue
+    }
 
     const content = await readFile(entry.path)
 
@@ -158,6 +241,10 @@ export const vaultRecords = async (
 
   await db.save()
 
+  if (withBlobs) {
+    await blobRetain(held).catch(() => undefined)
+  }
+
   return { records, oversized }
 }
 
@@ -184,6 +271,31 @@ export const applyVaultRemote = async (
     }
 
     echoes.set(path, Date.now() + ECHO)
+
+    if (!record.deleted && !isText(path)) {
+      const { blob } = record.data as BlobData
+      const placed = await fetchBlob(blob, path)
+
+      if (!placed) {
+        echoes.delete(path)
+        continue
+      }
+
+      const info = await fileInfo(vault.root, path)
+
+      await db.set(keyOf(path), {
+        id: path,
+        updatedAt: record.updatedAt,
+        deviceId: record.deviceId,
+        hash: blob,
+        base: null,
+        deleted: false,
+        size: info.size,
+        mtime: info.mtime,
+      } satisfies Stamp)
+      changed.push(path)
+      continue
+    }
 
     if (record.deleted) {
       await removeExternal(path)
